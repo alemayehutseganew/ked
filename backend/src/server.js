@@ -44,6 +44,7 @@ const express = require('express')
 const http = require('http')
 
 const app = express()
+app.use(express.json({ limit: '1mb' }))
 
 const cors = require('cors')
 
@@ -79,8 +80,6 @@ app.use((req, res, next) => {
   }
   next()
 })
-
-app.use(express.json({ limit: '1mb' }))
 
 app.get('/health', (req, res) => res.status(200).send('OK'))
 
@@ -177,7 +176,7 @@ async function initializeHeavyServices() {
   try {
     const { bot } = require('./bot/index')
     app.post(`/telegraf/${bot.secretPathComponent()}`, async (req, res) => {
-      console.log('[WEBHOOK TRACE] Received update from Telegram:', {
+      console.log('[WEBHOOK TRACE] Received body:', {
         parsed: req.body !== undefined,
         updateId: req.body?.update_id,
         updateType: req.body?.message ? 'message' : req.body?.callback_query ? 'callback_query' : 'other',
