@@ -49,7 +49,7 @@ app.use(express.json())
 const cors = require('cors')
 
 const allowedOrigins = [
-  'https://noor-one-beta.vercel.app',
+  'https://ked-seven.vercel.app',
   'http://localhost:5173'
 ]
 
@@ -141,9 +141,9 @@ function setupRealtime() {
   io = setupSocket(server)
   Object.assign(io.engine.opts.cors, {
     origin: [
-      'https://noor-one-beta.vercel.app',
-      'https://ked-seven.vercel.app',
-      'https://sale-green.vercel.app'
+      
+      'https://ked-seven.vercel.app'
+      
     ],
     methods: ['GET', 'POST'],
     credentials: true
