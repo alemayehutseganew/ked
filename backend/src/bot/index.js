@@ -281,6 +281,7 @@ async function showInvite(ctx) {
 }
 
 bot.start(async (ctx) => {
+  console.log(`[BOT TRACE] /start command received from user: ${ctx.from.id}`)
   const text = withSupport('Please select your language / እባክዎ ቋንቋ ይምረጡ:')
   const referralRef = getReferralRefFromStartPayload(ctx.startPayload)
 

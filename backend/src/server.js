@@ -177,14 +177,19 @@ async function initializeHeavyServices() {
   try {
     const { bot } = require('./bot/index')
     app.post(`/telegraf/${bot.secretPathComponent()}`, (req, res) => {
-      return bot.handleUpdate(req.body, res)
+      console.log('[WEBHOOK TRACE] Received request from Telegram')
+      res.sendStatus(200)
+      bot.handleUpdate(req.body).catch((err) => console.error('[WEBHOOK ERROR]', err))
     })
 
     const webhookUrl = process.env.WEBHOOK_URL
     if (webhookUrl) {
-      bot.telegram.setWebhook(`${webhookUrl.replace(/\/+$/, '')}/telegraf/${bot.secretPathComponent()}`)
-        .then(() => console.log('✅ Telegram Webhook set successfully'))
+      const normalizedWebhookUrl = webhookUrl.replace(/\/+$/, '')
+      bot.telegram.setWebhook(`${normalizedWebhookUrl}/telegraf/${bot.secretPathComponent()}`)
+        .then(() => console.log(`✅ Telegram Webhook set successfully to: ${normalizedWebhookUrl}`))
         .catch((err) => console.error('❌ Failed to set Telegram Webhook:', err))
+    } else {
+      console.error('❌ WEBHOOK_URL is missing in environment variables!')
     }
   } catch (err) {
     console.error('[STARTUP ERROR] Bot initialization failed:', err)
