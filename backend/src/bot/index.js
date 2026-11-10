@@ -140,6 +140,10 @@ if (!botToken) {
 
 const bot = new Telegraf(botToken)
 
+bot.catch((err, ctx) => {
+  console.error(`❌ [BOT ERROR] for ${ctx.updateType}:`, err)
+})
+
 // GLOBAL MIDDLEWARE: Clear state on any command to prevent state machine locks
 bot.use((ctx, next) => {
   if (ctx.message?.text?.startsWith('/') && ctx.from?.id !== undefined) {
@@ -198,10 +202,6 @@ function withSupportButton(options = {}) {
 function replyWithSupport(ctx, text, options = {}) {
   return ctx.reply(withSupport(text), withSupportButton(options))
 }
-
-bot.catch((err, ctx) => {
-  console.error(`[BOT] Error for ${ctx.updateType}:`, err.message)
-})
 
 try {
   bot.telegram.setChatMenuButton({

@@ -80,9 +80,9 @@ app.use((req, res, next) => {
   next()
 })
 
-app.get('/health', (req, res) => res.status(200).send('OK'))
-
 app.use(express.json({ limit: '1mb' }))
+
+app.get('/health', (req, res) => res.status(200).send('OK'))
 
 const server = http.createServer(app)
 let io
@@ -177,10 +177,15 @@ async function initializeHeavyServices() {
   try {
     const { bot } = require('./bot/index')
     app.post(`/telegraf/${bot.secretPathComponent()}`, async (req, res) => {
-      console.log('[WEBHOOK TRACE] Received update from Telegram')
+      console.log('[WEBHOOK TRACE] Received update from Telegram:', {
+        parsed: req.body !== undefined,
+        updateId: req.body?.update_id,
+        updateType: req.body?.message ? 'message' : req.body?.callback_query ? 'callback_query' : 'other',
+      })
       try {
         res.sendStatus(200)
         await bot.handleUpdate(req.body)
+        console.log('[WEBHOOK TRACE] Update processed successfully')
       } catch (err) {
         console.error('❌ [WEBHOOK CRASH]', err)
       }
