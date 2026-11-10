@@ -116,6 +116,21 @@ app.use('/api/users', lazyRouter('./routes/users'))
 app.use('/api/admin', lazyRouter('./routes/admin'))
 console.log('✅ API routes mounted: /api/auth, /api/rooms, /api/payments, /api/wallet, /api/users, /api/admin')
 
+// --- TELEGRAM WEBHOOK (Must be placed BEFORE the 404 handler) ---
+const { bot } = require('./bot/index')
+app.post(`/telegraf/${bot.secretPathComponent()}`, (req, res) => {
+  console.log('[WEBHOOK TRACE] Received update from Telegram:', req.body?.update_id)
+  res.sendStatus(200)
+  try {
+    bot.handleUpdate(req.body).catch((err) => {
+      console.error('❌ [WEBHOOK SYNC CRASH]', err)
+    })
+  } catch (err) {
+    console.error('❌ [WEBHOOK SYNC CRASH]', err)
+  }
+})
+// -------------------------------------------------------------------
+
 // --- 404 (must come after all routes) ---
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' })
@@ -174,20 +189,6 @@ const PORT = process.env.PORT || 3001
 
 async function initializeHeavyServices() {
   try {
-    const { bot } = require('./bot/index')
-    app.post(`/telegraf/${bot.secretPathComponent()}`, (req, res) => {
-      console.log('[WEBHOOK TRACE] Received update from Telegram:', req.body?.update_id)
-      res.sendStatus(200)
-
-      try {
-        bot.handleUpdate(req.body).catch((err) => {
-          console.error('❌ [WEBHOOK SYNC CRASH]', err)
-        })
-      } catch (err) {
-        console.error('❌ [WEBHOOK SYNC CRASH]', err)
-      }
-    })
-
     const webhookUrl = process.env.WEBHOOK_URL
     if (webhookUrl) {
       const normalizedWebhookUrl = webhookUrl.replace(/\/+$/, '')

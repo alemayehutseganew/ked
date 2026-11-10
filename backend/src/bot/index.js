@@ -2,7 +2,7 @@ const { Telegraf, Markup } = require('telegraf')
 const db = require('../db')
 
 const userStates = {}
-const SUPPORT_URL = 'https://t.me/Knoor1221'
+const SUPPORT_URL = '+251930702649'
 const botTranslations = {
   en: {
     selectLanguage: 'Please select your language:',
@@ -44,8 +44,8 @@ const botTranslations = {
 For more support: @saleg122`,
     registerPrompt: 'To complete your registration, please share your phone number:',
     sharePhone: '📱 Share Phone Number',
-    depositInstructions: '💳 To Deposit:\n\n👤 Name: {{name}}\n📱 Telebirr: {{phone}}\n\n1. Open your Telebirr app\n2. Send money to the number above\n3. Copy the SMS you receive\n\n👇 Now paste the full SMS here:\n\nFor more support: https://t.me/Knoor1221',
-    withdrawPrompt: 'Enter the amount you want to withdraw (Minimum 100 ETB):\n\nFor more support: https://t.me/Knoor1221',
+    depositInstructions: '💳 To Deposit:\n\n👤 Name: {{name}}\n📱 Telebirr: {{phone}}\n\n1. Open your Telebirr app\n2. Send money to the number above\n3. Copy the SMS you receive\n\n👇 Now paste the full SMS here:\n\nFor more support: +251 93 070 2649',
+    withdrawPrompt: 'Enter the amount you want to withdraw (Minimum 100 ETB):\n\nFor more support: +251 93 070 2649',
     roomPrompt: 'To join a room, please open the Mini App and select a stake.',
     openLobby: 'Open Lobby',
     invalidReference: 'Could not find a valid transaction number in that SMS.',
@@ -107,8 +107,8 @@ For more support: @saleg122`,
 ለተጨማሪ ድጋፍ፦ @saleg122`,
     registerPrompt: 'ምዝገባዎን ለማጠናቀቅ እባክዎ ስልክ ቁጥርዎን ያጋሩ፦',
     sharePhone: '📱 ስልክ ቁጥር ያጋሩ',
-    depositInstructions: '💳 ገንዘብ ለማስገባት፦\n\n👤 ስም፦ {{name}}\n📱 ቴሌብር፦ {{phone}}\n\n1. የቴሌብር መተግበሪያዎን ይክፈቱ።\n2. ከላይ ወደተጠቀሰው ቁጥር ገንዘብ ይላኩ።\n3. የደረሰዎትን ኤስኤምኤስ ኮፒ ያድርጉ።\n\n👇 አሁን ሙሉውን ኤስኤምኤስ እዚህ ይለጥፉ፦\n\nለተጨማሪ ድጋፍ፦ https://t.me/Knoor1221',
-    withdrawPrompt: 'ማውጣት የሚፈልጉትን መጠን ያስገቡ (ዝቅተኛው 100 ብር)፦\n\nለተጨማሪ ድጋፍ፦ https://t.me/Knoor1221',
+    depositInstructions: '💳 ገንዘብ ለማስገባት፦\n\n👤 ስም፦ {{name}}\n📱 ቴሌብር፦ {{phone}}\n\n1. የቴሌብር መተግበሪያዎን ይክፈቱ።\n2. ከላይ ወደተጠቀሰው ቁጥር ገንዘብ ይላኩ።\n3. የደረሰዎትን ኤስኤምኤስ ኮፒ ያድርጉ።\n\n👇 አሁን ሙሉውን ኤስኤምኤስ እዚህ ይለጥፉ፦\n\nለተጨማሪ ድጋፍ፦ +251930702649',
+    withdrawPrompt: 'ማውጣት የሚፈልጉትን መጠን ያስገቡ (ዝቅተኛው 100 ብር)፦\n\nለተጨማሪ ድጋፍ፦ +251930702649',
     roomPrompt: 'ክፍል ለመቀላቀል ሚኒ አፑን ከፍተው የውለታ መጠን ይምረጡ።',
     openLobby: 'ዋና ገጽን ክፈት',
     invalidReference: 'በዚያ ኤስኤምኤስ ውስጥ ትክክለኛ የግብይት ቁጥር አልተገኘም።',
@@ -154,7 +154,7 @@ bot.use((ctx, next) => {
   return next()
 })
 
-const DEFAULT_FRONTEND_URL = 'https://noor-one-beta.vercel.app/'
+const DEFAULT_FRONTEND_URL = 'https://ked-seven.vercel.app/'
 
 function getFrontendUrl(referralRef) {
   const url = new URL(process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL)
