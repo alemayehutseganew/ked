@@ -44,7 +44,7 @@ const express = require('express')
 const http = require('http')
 
 const app = express()
-app.use(express.json({ limit: '1mb' }))
+app.use(express.json())
 
 const cors = require('cors')
 
@@ -175,18 +175,16 @@ const PORT = process.env.PORT || 3001
 async function initializeHeavyServices() {
   try {
     const { bot } = require('./bot/index')
-    app.post(`/telegraf/${bot.secretPathComponent()}`, async (req, res) => {
-      console.log('[WEBHOOK TRACE] Received body:', {
-        parsed: req.body !== undefined,
-        updateId: req.body?.update_id,
-        updateType: req.body?.message ? 'message' : req.body?.callback_query ? 'callback_query' : 'other',
-      })
+    app.post(`/telegraf/${bot.secretPathComponent()}`, (req, res) => {
+      console.log('[WEBHOOK TRACE] Received update from Telegram:', req.body?.update_id)
+      res.sendStatus(200)
+
       try {
-        res.sendStatus(200)
-        await bot.handleUpdate(req.body)
-        console.log('[WEBHOOK TRACE] Update processed successfully')
+        bot.handleUpdate(req.body).catch((err) => {
+          console.error('❌ [WEBHOOK SYNC CRASH]', err)
+        })
       } catch (err) {
-        console.error('❌ [WEBHOOK CRASH]', err)
+        console.error('❌ [WEBHOOK SYNC CRASH]', err)
       }
     })
 

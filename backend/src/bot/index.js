@@ -140,6 +140,8 @@ if (!botToken) {
 
 const bot = new Telegraf(botToken)
 
+console.log('🤖 Initializing Bot with Token:', process.env.TELEGRAM_BOT_TOKEN ? 'Token Exists' : 'MISSING TOKEN!')
+
 bot.catch((err, ctx) => {
   console.error(`❌ [BOT ERROR] for ${ctx.updateType}:`, err)
 })
@@ -287,7 +289,7 @@ async function showInvite(ctx) {
 }
 
 bot.start(async (ctx) => {
-  console.log(`[BOT TRACE] /start command received from user: ${ctx.from.id}`)
+  console.log(`[BOT TRACE] /start received from user ${ctx.from.id}`)
   const text = withSupport('Please select your language / እባክዎ ቋንቋ ይምረጡ:')
   const referralRef = getReferralRefFromStartPayload(ctx.startPayload)
 
