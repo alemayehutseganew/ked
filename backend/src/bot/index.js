@@ -132,7 +132,13 @@ For more support: @saleg122`,
   },
 }
 
-const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
+const botToken = process.env.TELEGRAM_BOT_TOKEN
+if (!botToken) {
+  console.error('❌ TELEGRAM_BOT_TOKEN is missing!')
+  throw new Error('TELEGRAM_BOT_TOKEN is required to initialize the Telegram bot.')
+}
+
+const bot = new Telegraf(botToken)
 
 // GLOBAL MIDDLEWARE: Clear state on any command to prevent state machine locks
 bot.use((ctx, next) => {

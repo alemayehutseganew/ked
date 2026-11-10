@@ -176,10 +176,14 @@ const PORT = process.env.PORT || 3001
 async function initializeHeavyServices() {
   try {
     const { bot } = require('./bot/index')
-    app.post(`/telegraf/${bot.secretPathComponent()}`, (req, res) => {
-      console.log('[WEBHOOK TRACE] Received request from Telegram')
-      res.sendStatus(200)
-      bot.handleUpdate(req.body).catch((err) => console.error('[WEBHOOK ERROR]', err))
+    app.post(`/telegraf/${bot.secretPathComponent()}`, async (req, res) => {
+      console.log('[WEBHOOK TRACE] Received update from Telegram')
+      try {
+        res.sendStatus(200)
+        await bot.handleUpdate(req.body)
+      } catch (err) {
+        console.error('❌ [WEBHOOK CRASH]', err)
+      }
     })
 
     const webhookUrl = process.env.WEBHOOK_URL
