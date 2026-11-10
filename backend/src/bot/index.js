@@ -2,6 +2,8 @@ const { Telegraf, Markup } = require('telegraf')
 const db = require('../db')
 
 const userStates = {}
+const SUPPORT_TEXT = '\n\nFor more support call or chat with +251930702649'
+
 const botTranslations = {
   en: {
     selectLanguage: 'Please select your language:',
@@ -239,7 +241,7 @@ async function showInvite(ctx) {
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent(shareText)}`
     const frontendUrl = process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL
 
-    await ctx.reply(botText(lang, 'inviteEarn', { link: refLink }), {
+    await ctx.reply(botText(lang, 'inviteEarn', { link: refLink }) + SUPPORT_TEXT, {
       disable_web_page_preview: true,
       reply_markup: {
         inline_keyboard: [
@@ -259,7 +261,7 @@ bot.start(async (ctx) => {
   console.log(`[BOT TRACE] /start received from user ${ctx.from.id}`)
   const referralRef = getReferralRefFromStartPayload(ctx.startPayload)
 
-  ctx.reply('Please select your language / እባክዎ ቋንቋ ይምረጡ:', {
+  ctx.reply('Please select your language / እባክዎ ቋንቋ ይምረጡ:' + SUPPORT_TEXT, {
     reply_markup: {
       inline_keyboard: [
         [
@@ -279,7 +281,7 @@ bot.start(async (ctx) => {
 
 bot.command('menu', async (ctx) => {
   const lang = await getUserLanguage(ctx)
-  ctx.reply(botText(lang, 'mainMenu'), getMainMenu(lang)).catch(() => {})
+  ctx.reply(botText(lang, 'mainMenu') + SUPPORT_TEXT, getMainMenu(lang)).catch(() => {})
 })
 
 bot.command(['invite', 'referral'], async (ctx) => {
@@ -289,7 +291,7 @@ bot.command(['invite', 'referral'], async (ctx) => {
 
 bot.command('play', async (ctx) => {
   const lang = await getUserLanguage(ctx)
-  ctx.reply(botText(lang, 'launchPrompt'), {
+  ctx.reply(botText(lang, 'launchPrompt') + SUPPORT_TEXT, {
     reply_markup: { inline_keyboard: [[{ text: botText(lang, 'playBingo'), web_app: { url: process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL } }]] }
   }).catch(() => {})
 })
@@ -298,22 +300,22 @@ bot.command('balance', async (ctx) => {
   const lang = await getUserLanguage(ctx)
   try {
     const user = await db('users').where({ telegram_id: ctx.from.id }).first()
-    if (user) ctx.reply(botText(lang, 'balance', { amount: Number(user.wallet_balance || 0).toFixed(2) })).catch(() => {})
-    else ctx.reply(botText(lang, 'userNotFound')).catch(() => {})
+    if (user) ctx.reply(botText(lang, 'balance', { amount: Number(user.wallet_balance || 0).toFixed(2) }) + SUPPORT_TEXT).catch(() => {})
+    else ctx.reply(botText(lang, 'userNotFound') + SUPPORT_TEXT).catch(() => {})
   } catch (e) {
-    ctx.reply(botText(lang, 'balanceFailed')).catch(() => {})
+    ctx.reply(botText(lang, 'balanceFailed') + SUPPORT_TEXT).catch(() => {})
   }
 })
 
 bot.command('help', async (ctx) => {
   const lang = await getUserLanguage(ctx)
-  ctx.reply(botText(lang, 'helpMessage')).catch(() => {})
+  ctx.reply(botText(lang, 'helpMessage') + SUPPORT_TEXT).catch(() => {})
 })
 
 bot.command('register', async (ctx) => {
   const lang = await getUserLanguage(ctx)
   await ctx.reply(
-    botText(lang, 'registerPrompt'),
+    botText(lang, 'registerPrompt') + SUPPORT_TEXT,
     Markup.keyboard([
       [Markup.button.contactRequest(botText(lang, 'sharePhone'))]
     ]).resize().oneTime()
@@ -326,13 +328,13 @@ bot.command('deposit', async (ctx) => {
   ctx.reply(botText(lang, 'depositInstructions', {
     name: process.env.TELEBIRR_RECEIVER_NAME,
     phone: process.env.TELEBIRR_RECEIVER_NUMBER,
-  })).catch(() => {})
+  }) + SUPPORT_TEXT).catch(() => {})
 })
 
 bot.command('withdraw', async (ctx) => {
   const lang = await getUserLanguage(ctx)
   userStates[ctx.from.id] = 'WAITING_FOR_WITHDRAW_AMOUNT'
-  ctx.reply(botText(lang, 'withdrawPrompt')).catch(() => {})
+  ctx.reply(botText(lang, 'withdrawPrompt') + SUPPORT_TEXT).catch(() => {})
 })
 
 bot.action('show_invite', async (ctx) => {
@@ -357,11 +359,11 @@ bot.action('menu_balance', async (ctx) => {
   try {
     await ctx.answerCbQuery().catch(() => {})
     const user = await db('users').where({ telegram_id: ctx.from.id }).first()
-    if (!user) return ctx.reply(botText(lang, 'userNotFound'))
-    ctx.reply(botText(lang, 'balance', { amount: Number(user.wallet_balance || 0).toFixed(2) })).catch(() => {})
+    if (!user) return ctx.reply(botText(lang, 'userNotFound') + SUPPORT_TEXT)
+    ctx.reply(botText(lang, 'balance', { amount: Number(user.wallet_balance || 0).toFixed(2) }) + SUPPORT_TEXT).catch(() => {})
   } catch (err) {
     console.error('Balance Error:', err)
-    ctx.reply(botText(lang, 'balanceFailed')).catch(() => {})
+    ctx.reply(botText(lang, 'balanceFailed') + SUPPORT_TEXT).catch(() => {})
   }
 })
 
@@ -373,20 +375,20 @@ bot.action('menu_deposit', async (ctx) => {
     name: process.env.TELEBIRR_RECEIVER_NAME,
     phone: process.env.TELEBIRR_RECEIVER_NUMBER,
   })
-  ctx.reply(msg).catch(() => {})
+  ctx.reply(msg + SUPPORT_TEXT).catch(() => {})
 })
 
 bot.action('menu_withdraw', async (ctx) => {
   const lang = await getUserLanguage(ctx)
   await ctx.answerCbQuery().catch(() => {})
   userStates[ctx.from.id] = 'WAITING_FOR_WITHDRAW_AMOUNT'
-  ctx.reply(botText(lang, 'withdrawPrompt')).catch(() => {})
+  ctx.reply(botText(lang, 'withdrawPrompt') + SUPPORT_TEXT).catch(() => {})
 })
 
 bot.action('menu_room', async (ctx) => {
   const lang = await getUserLanguage(ctx)
   await ctx.answerCbQuery().catch(() => {})
-  ctx.reply(botText(lang, 'roomPrompt'), {
+  ctx.reply(botText(lang, 'roomPrompt') + SUPPORT_TEXT, {
     reply_markup: { inline_keyboard: [[{ text: botText(lang, 'openLobby'), web_app: { url: process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL } }]] }
   }).catch(() => {})
 })
@@ -394,7 +396,7 @@ bot.action('menu_room', async (ctx) => {
 bot.action('menu_help', async (ctx) => {
   const lang = await getUserLanguage(ctx)
   await ctx.answerCbQuery().catch(() => {})
-  ctx.reply(botText(lang, 'helpMessage')).catch(() => {})
+  ctx.reply(botText(lang, 'helpMessage') + SUPPORT_TEXT).catch(() => {})
 })
 
 bot.on('inline_query', async (ctx) => {
@@ -431,7 +433,7 @@ bot.on('contact', async (ctx) => {
     const existingUser = await db('users').where({ telegram_id: telegramId }).first()
     if (existingUser && existingUser.phone_number) {
       await ctx.reply(
-        botText(lang, 'alreadyRegistered'),
+        botText(lang, 'alreadyRegistered') + SUPPORT_TEXT,
         Markup.removeKeyboard()
       )
       return
@@ -443,7 +445,7 @@ bot.on('contact', async (ctx) => {
 
     if (updated) {
       await ctx.reply(
-        botText(lang, 'phoneSaved', { phone: phoneNumber }),
+        botText(lang, 'phoneSaved', { phone: phoneNumber }) + SUPPORT_TEXT,
         Markup.removeKeyboard()
       )
     } else {
@@ -454,13 +456,13 @@ bot.on('contact', async (ctx) => {
         wallet_balance: 0
       })
       await ctx.reply(
-        botText(lang, 'registrationComplete', { phone: phoneNumber }),
+        botText(lang, 'registrationComplete', { phone: phoneNumber }) + SUPPORT_TEXT,
         Markup.removeKeyboard()
       )
     }
   } catch (err) {
     console.error('Contact save error:', err)
-    await ctx.reply(botText(lang, 'contactFailed'))
+    await ctx.reply(botText(lang, 'contactFailed') + SUPPORT_TEXT)
   }
 })
 
@@ -488,17 +490,17 @@ bot.on('text', async (ctx) => {
       const smsText = ctx.message.text
       const extractedReceipt = extractTelebirrReceipt(smsText)
       if (!extractedReceipt.reference) {
-        return ctx.reply(botText(lang, 'invalidReference')).catch(() => {})
+        return ctx.reply(botText(lang, 'invalidReference') + SUPPORT_TEXT).catch(() => {})
       }
 
       const parsedFromSMS = parseTelebirrSMS(smsText)
       if (!parsedFromSMS) {
-        return ctx.reply(botText(lang, 'invalidReceipt')).catch(() => {})
+        return ctx.reply(botText(lang, 'invalidReceipt') + SUPPORT_TEXT).catch(() => {})
       }
 
       const user = await db('users').where({ telegram_id: ctx.from.id }).first()
       if (!user) {
-        return ctx.reply(botText(lang, 'userNotFound')).catch(() => {})
+        return ctx.reply(botText(lang, 'userNotFound') + SUPPORT_TEXT).catch(() => {})
       }
 
       let deposit
@@ -512,15 +514,15 @@ bot.on('text', async (ctx) => {
         })
       } catch (err) {
         if (err.code === '23505') {
-          return ctx.reply(botText(lang, 'receiptUsed')).catch(() => {})
+          return ctx.reply(botText(lang, 'receiptUsed') + SUPPORT_TEXT).catch(() => {})
         }
         const message = err instanceof PaymentVerificationError
           ? err.message
           : botText(lang, 'unableDeposit')
-        return ctx.reply(botText(lang, 'verificationFailed', { error: message })).catch(() => {})
+        return ctx.reply(botText(lang, 'verificationFailed', { error: message }) + SUPPORT_TEXT).catch(() => {})
       }
 
-      ctx.reply(botText(lang, 'depositSubmitted', { amount: deposit.amount.toFixed(2) })).catch(() => {})
+      ctx.reply(botText(lang, 'depositSubmitted', { amount: deposit.amount.toFixed(2) }) + SUPPORT_TEXT).catch(() => {})
       delete userStates[ctx.from.id]
       return
     }
@@ -528,14 +530,14 @@ bot.on('text', async (ctx) => {
     if (state === 'WAITING_FOR_WITHDRAW_AMOUNT') {
       const amount = Number(ctx.message.text)
       if (isNaN(amount) || amount < 100) {
-        return ctx.reply(botText(lang, 'invalidWithdrawal')).catch(() => {})
+        return ctx.reply(botText(lang, 'invalidWithdrawal') + SUPPORT_TEXT).catch(() => {})
       }
 
       const user = await db('users').where({ telegram_id: ctx.from.id }).first()
-      if (!user) return ctx.reply(botText(lang, 'userNotFound')).catch(() => {})
+      if (!user) return ctx.reply(botText(lang, 'userNotFound') + SUPPORT_TEXT).catch(() => {})
 
       if (Number(user.wallet_balance) < amount) {
-        return ctx.reply(botText(lang, 'insufficientBalance', { amount: Number(user.wallet_balance).toFixed(2) })).catch(() => {})
+        return ctx.reply(botText(lang, 'insufficientBalance', { amount: Number(user.wallet_balance).toFixed(2) }) + SUPPORT_TEXT).catch(() => {})
       }
 
       await db.transaction(async (trx) => {
@@ -553,14 +555,14 @@ bot.on('text', async (ctx) => {
         });
       })
 
-      ctx.reply(botText(lang, 'withdrawalPending', { amount: amount.toFixed(2) })).catch(() => {})
+      ctx.reply(botText(lang, 'withdrawalPending', { amount: amount.toFixed(2) }) + SUPPORT_TEXT).catch(() => {})
       delete userStates[ctx.from.id]
       return
     }
   } catch (err) {
     console.error('Text Handler Error:', err)
     const lang = await getUserLanguage(ctx)
-    ctx.reply(botText(lang, 'requestFailed')).catch(() => {})
+    ctx.reply(botText(lang, 'requestFailed') + SUPPORT_TEXT).catch(() => {})
   }
 })
 
