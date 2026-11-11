@@ -7,7 +7,7 @@ const { bot } = require('../bot/index')
 const rooms = {}
 const JWT_SECRET = process.env.JWT_SECRET
 const roomStatusRank = { WAITING: 0, COUNTDOWN: 1, PLAYING: 2, CLAIMING: 3, ENDED: 4 }
-const NO_WINNER_GRACE_MS = 5000
+const NO_WINNER_GRACE_MS = 3000
 
 function getBallData(number) {
   if (!Number.isFinite(Number(number))) return null
@@ -446,10 +446,7 @@ async function startCountdown(io, roomId) {
           if (room.calledNumbers.size === 75) {
             clearInterval(room.intervalId)
             room.intervalId = null
-            room.status = 'ENDED'
-            await db('game_rooms').where({ id: roomId }).update({ status: 'ENDED' })
-            io.to(roomId).emit('game_ended_for_spectators')
-            scheduleRoomReset(io, roomId, room)
+            scheduleNoWinner(io, roomId, room)
           }
         }, 3000)
       } catch (err) {
@@ -527,7 +524,7 @@ function initGameHandler(io) {
         }
 
         // Reconnecting during an active round never restores player status.
-        if (['PLAYING', 'CLAIMING', 'COUNTDOWN'].includes(persistedRoom.status)) {
+        if (['PLAYING', 'CLAIMING'].includes(persistedRoom.status)) {
           const room = rooms[roomId]
           const playerCount = await emitCurrentRoomState(socket, roomId, room)
           socket.emit('game_in_progress', {
