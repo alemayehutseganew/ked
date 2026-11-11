@@ -27,6 +27,7 @@ export default function CardSelection({
   const [takenCards, setTakenCards] = useState([]);
   const [selectedCard, setSelectedCard] = useState(cardData?.id ? Number(cardData.id) : null);
   const [selectedMatrix, setSelectedMatrix] = useState(cardData?.matrix || null);
+  const [cardWasUnselected, setCardWasUnselected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const currentSelectedCard = selectedCard ?? (cardData?.id ? Number(cardData.id) : null);
@@ -125,6 +126,7 @@ export default function CardSelection({
       };
       setSelectedCard(updatedCard.id);
       setSelectedMatrix(updatedCard.matrix);
+      setCardWasUnselected(false);
 
       if (roomId) {
         onCardUpdated?.(updatedCard);
@@ -151,6 +153,42 @@ export default function CardSelection({
       if (errorMessage.includes('taken')) {
         setTakenCards((prev) => [...prev, cardNumber]);
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUnselect = async () => {
+    if (selectionLocked || loading || !currentSelectedCard || !roomId) return;
+
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetchApi(`/rooms/${encodeURIComponent(roomId)}/my-card`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to unselect card');
+      }
+
+      setSelectedCard(null);
+      setSelectedMatrix(null);
+      setCardWasUnselected(true);
+      onCardUpdated?.(null);
+
+      try {
+        const cardsRes = await fetchApi(`/rooms/active-cards?stake=${encodeURIComponent(stake)}`);
+        if (!cardsRes.ok) throw new Error('Failed to refresh available cards');
+        const cardsData = await cardsRes.json();
+        setTakenCards(cardsData.takenCards || []);
+      } catch (err) {
+        console.error('Card was unselected, but available cards could not be refreshed:', err);
+        setError('Card was unselected, but available cards could not be refreshed.');
+      }
+    } catch (err) {
+      setError(String(err.message || 'Failed to unselect card'));
     } finally {
       setLoading(false);
     }
@@ -185,7 +223,7 @@ export default function CardSelection({
             {Array.from({ length: 400 }, (_, i) => i + 1).map((cardNumber) => {
               const isSelected = currentSelectedCard === cardNumber;
               const isTaken = takenCards.includes(cardNumber) && !isSelected;
-              const isDisabled = isTaken || loading || selectionLocked || (roomId && !cardData);
+              const isDisabled = isTaken || loading || selectionLocked || (roomId && !cardData && !cardWasUnselected);
 
               return (
                 <button
@@ -197,7 +235,7 @@ export default function CardSelection({
                   className={`relative flex items-center justify-center rounded-md border px-1 py-1 text-xs font-bold transition-all duration-100 touch-manipulation ${
                     isSelected
                       ? 'border-blue-700 border-b-4 bg-blue-500 text-white shadow-[0_3px_0_rgb(29,78,216)] active:translate-y-1 active:shadow-none'
-                      : isTaken || selectionLocked || loading || (roomId && !cardData)
+                      : isTaken || selectionLocked || loading || (roomId && !cardData && !cardWasUnselected)
                         ? 'cursor-not-allowed border-gray-900 border-b-4 bg-gray-800 text-gray-600 opacity-60'
                         : 'border-gray-300 border-b-4 bg-white text-black shadow-[0_3px_0_rgb(156,163,175)] hover:-translate-y-0.5 hover:shadow-[0_4px_0_rgb(156,163,175)] active:translate-y-1 active:shadow-none'
                   }`}
@@ -212,7 +250,18 @@ export default function CardSelection({
 
       <div className="fixed bottom-0 z-30 h-32 w-full border-t border-gray-700 bg-[#0f172a] p-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
         <div className="mx-auto flex h-full max-w-4xl gap-2">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl bg-white p-1.5 text-gray-900">
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col rounded-xl bg-white p-1.5 text-gray-900">
+            {currentSelectedCard && roomId && !selectionLocked && (
+              <button
+                type="button"
+                onClick={handleUnselect}
+                disabled={loading}
+                className="absolute right-2 top-1 z-10 text-[9px] font-bold text-red-500 hover:text-red-700 disabled:opacity-50 sm:text-xs"
+                title="Unselect Card"
+              >
+                ✖ Unselect
+              </button>
+            )}
             <div className="mb-1 shrink-0 truncate text-center text-[10px] font-bold leading-3 sm:text-xs">
               {currentSelectedCard ? t('cardNo', { number: currentSelectedCard }) : t('selectCard')}
             </div>
