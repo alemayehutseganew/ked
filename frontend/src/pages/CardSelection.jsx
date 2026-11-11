@@ -98,16 +98,7 @@ export default function CardSelection({
         setSelectedCard(null);
         setSelectedMatrix(null);
         onCardUpdated?.(null);
-
-        try {
-          const cardsRes = await fetchApi(`/rooms/active-cards?stake=${encodeURIComponent(stake)}`);
-          if (!cardsRes.ok) throw new Error('Failed to refresh available cards');
-          const cardsData = await cardsRes.json();
-          setTakenCards(cardsData.takenCards || []);
-        } catch (err) {
-          console.error('Card was unselected, but available cards could not be refreshed:', err);
-          setError('Card was unselected, but available cards could not be refreshed.');
-        }
+        navigate(`/select-card?stake=${encodeURIComponent(stake)}`, { replace: true });
       } catch (err) {
         setError(String(err.message || 'Failed to unselect card'));
       } finally {
