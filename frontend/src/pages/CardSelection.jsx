@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchApi } from '../services/api';
 import SocketService from '../services/socket';
 import { unlockAudio } from '../utils/bingoSounds';
+import { useWallet } from '../WalletContext';
 
 const formatTime = (seconds) => {
   const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -33,6 +34,7 @@ export default function CardSelection({
   const roomId = searchParams.get('roomId');
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { balance } = useWallet();
 
   const [takenCards, setTakenCards] = useState([]);
   const [waitingRoomId, setWaitingRoomId] = useState(null);
@@ -305,7 +307,7 @@ export default function CardSelection({
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-[#0f172a] text-white">
       <div className="flex-1 overflow-y-auto p-4 pb-36">
         <div className="mx-auto max-w-4xl">
-          <div className="mx-auto mb-6 w-full max-w-lg">
+          <div className="mx-auto mb-2 w-full max-w-lg">
             {!roomId && (
               <button
                 onClick={() => navigate('/')}
@@ -323,10 +325,13 @@ export default function CardSelection({
                 </span>
                 {t('players') || 'Players'}: {displayedPlayersCount}
               </div>
-
-              <h1 className="whitespace-nowrap bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-right text-xl font-extrabold tracking-tight text-transparent drop-shadow-sm sm:text-2xl">
-                {t('selectCard')} <span className="text-lg sm:text-xl">({stake} ETB)</span>
-              </h1>
+              <div className="flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900/80 px-3 shadow-inner">
+                <span className="text-sm text-yellow-400" aria-hidden="true">💰</span>
+                <span className="whitespace-nowrap text-sm font-black tabular-nums text-white sm:text-base">
+                  {Number.isFinite(Number(balance)) ? Number(balance).toFixed(2) : '0.00'}
+                  <span className="ml-1 text-[10px] font-bold text-slate-400">ETB</span>
+                </span>
+              </div>
             </div>
           </div>
 
