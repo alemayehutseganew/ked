@@ -28,7 +28,8 @@ export default function CardSelection({
 }) {
   const [searchParams] = useSearchParams();
   console.log('[CARD SELECTION] Rendering. Stake:', searchParams.get('stake'));
-  const stake = Number(searchParams.get('stake')) || 10;
+  const rawStake = searchParams.get('stake');
+  const stake = rawStake ? Number(rawStake) || 10 : 10;
   const roomId = searchParams.get('roomId');
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -40,7 +41,8 @@ export default function CardSelection({
   const [selectedCard, setSelectedCard] = useState(null);
   const [selectedMatrix, setSelectedMatrix] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [toast, setToast] = useState({ show: false, message: '', type: 'error' });
+  const [toastVisible, setToastVisible] = useState(false);
   const activeRoomId = roomId || waitingRoomId;
   const displayedPlayersCount = socketPlayersCount ?? playersCount;
   const displayedCountdown = socketCountdown !== undefined ? socketCountdown : countdown;
@@ -49,6 +51,26 @@ export default function CardSelection({
   const selectionLocked = isGameStarted
     || (displayedCountdown !== null && displayedCountdown !== undefined && displayedCountdown <= 0);
   const hasCountdown = displayedCountdown !== null && displayedCountdown !== undefined;
+
+  const showToast = (message, type = 'error') => {
+    setToast({ show: true, message, type });
+  };
+
+  useEffect(() => {
+    if (!toast.show) return undefined;
+
+    const animationFrame = requestAnimationFrame(() => setToastVisible(true));
+    const hideTimeout = setTimeout(() => setToastVisible(false), 3000);
+    const dismissTimeout = setTimeout(() => {
+      setToast({ show: false, message: '', type: 'error' });
+    }, 3300);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      clearTimeout(hideTimeout);
+      clearTimeout(dismissTimeout);
+    };
+  }, [toast]);
 
   useEffect(() => {
     if (roomId) return undefined;
@@ -79,10 +101,11 @@ export default function CardSelection({
         const res = await fetchApi(`/rooms/active-cards?stake=${stake}`);
         if (res.ok) {
           const data = await res.json();
-          setTakenCards(data.takenCards || []);
+          setTakenCards(Array.isArray(data.takenCards) ? data.takenCards : []);
         }
       } catch (err) {
         console.error('Failed to fetch taken cards', err);
+        setTakenCards([]);
       }
     };
     fetchTakenCards();
@@ -161,7 +184,6 @@ export default function CardSelection({
       if (!roomId) return;
 
       setLoading(true);
-      setError('');
       try {
         const res = await fetchApi(`/rooms/${encodeURIComponent(roomId)}/my-card`, {
           method: 'DELETE',
@@ -177,7 +199,7 @@ export default function CardSelection({
         onCardUpdated?.(null);
         navigate(`/select-card?stake=${encodeURIComponent(stake)}`, { replace: true });
       } catch (err) {
-        setError(String(err.message || 'Failed to unselect card'));
+        showToast(String(err.message || 'Failed to unselect card'));
       } finally {
         setLoading(false);
       }
@@ -188,10 +210,12 @@ export default function CardSelection({
 
     const previousCard = currentSelectedCard;
     const previousMatrix = currentSelectedMatrix;
+    setTakenCards((prev) => prev.filter((takenCard) => (
+      takenCard !== previousCard && takenCard !== cardNumber
+    )));
     setSelectedCard(cardNumber);
     setSelectedMatrix(null);
     setLoading(true);
-    setError('');
 
     try {
       const res = await fetchApi('/rooms/join', {
@@ -259,9 +283,9 @@ export default function CardSelection({
 
       setSelectedCard(previousCard);
       setSelectedMatrix(previousMatrix);
-      setError(errorText || t('joinFailed'));
+      showToast(errorText || t('joinFailed'));
       if (errorMessage.includes('taken')) {
-        setTakenCards((prev) => [...prev, cardNumber]);
+        setTakenCards((prev) => (prev.includes(cardNumber) ? prev : [...prev, cardNumber]));
       }
     } finally {
       setLoading(false);
@@ -288,7 +312,7 @@ export default function CardSelection({
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                 </span>
-                {t('players') || 'Players'}: {livePlayersCount}
+                {t('players') || 'Players'}: {displayedPlayersCount}
               </div>
 
               <h1 className="whitespace-nowrap bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-right text-xl font-extrabold tracking-tight text-transparent drop-shadow-sm sm:text-2xl">
@@ -296,12 +320,6 @@ export default function CardSelection({
               </h1>
             </div>
           </div>
-
-          {error && (
-            <div className="mb-4 rounded bg-red-600 p-3 text-center text-white">
-              {error}
-            </div>
-          )}
 
           <div className="mx-auto grid max-w-lg grid-cols-6 gap-1 p-2 sm:grid-cols-8">
             {Array.from({ length: 400 }, (_, i) => i + 1).map((cardNumber) => {
@@ -408,6 +426,26 @@ export default function CardSelection({
           </div>
         </div>
       </div>
+      {toast.show && (
+        <div
+          role="alert"
+          className={`fixed bottom-36 left-1/2 z-50 w-11/12 max-w-sm -translate-x-1/2 transition-all duration-300 ${
+            toastVisible ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'
+          }`}
+        >
+          <div className="flex items-center gap-3 rounded-2xl border border-red-500/50 bg-slate-800/90 p-4 shadow-[0_10px_30px_rgba(239,68,68,0.3)] backdrop-blur-xl">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500/20">
+              <span className="text-lg text-red-400" aria-hidden="true">⚠️</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold leading-tight text-white">
+                {toast.type === 'error' ? 'Action Failed' : 'Success'}
+              </p>
+              <p className="mt-0.5 break-words text-xs text-slate-300">{toast.message}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
