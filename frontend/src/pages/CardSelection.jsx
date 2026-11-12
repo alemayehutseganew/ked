@@ -27,7 +27,8 @@ export default function CardSelection({
   onCardUpdated,
 }) {
   const [searchParams] = useSearchParams();
-  const stake = searchParams.get('stake') || '10';
+  console.log('[CARD SELECTION] Rendering. Stake:', searchParams.get('stake'));
+  const stake = Number(searchParams.get('stake')) || 10;
   const roomId = searchParams.get('roomId');
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -36,8 +37,8 @@ export default function CardSelection({
   const [waitingRoomId, setWaitingRoomId] = useState(null);
   const [socketPlayersCount, setSocketPlayersCount] = useState(null);
   const [socketCountdown, setSocketCountdown] = useState(undefined);
-  const [selectedCard, setSelectedCard] = useState(cardData?.id ? Number(cardData.id) : null);
-  const [selectedMatrix, setSelectedMatrix] = useState(cardData?.matrix || null);
+  const [selectedCard, setSelectedCard] = useState(null);
+  const [selectedMatrix, setSelectedMatrix] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const activeRoomId = roomId || waitingRoomId;
@@ -340,7 +341,7 @@ export default function CardSelection({
             <div className="mb-1.5 mt-0.5 shrink-0 truncate text-center text-[10px] font-bold leading-3 text-slate-300 sm:text-xs">
               {currentSelectedCard ? t('cardNo', { number: currentSelectedCard }) : t('selectCard')}
             </div>
-            {currentSelectedMatrix ? (
+            {Array.isArray(currentSelectedMatrix) ? (
               <div className="grid min-h-0 flex-1 grid-cols-5 grid-rows-6 gap-0.5">
                 {['B', 'I', 'N', 'G', 'O'].map((letter, index) => {
                   return (
