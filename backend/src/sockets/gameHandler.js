@@ -460,11 +460,41 @@ async function startCountdown(io, roomId) {
   }, 1000)
 }
 
+async function checkAutoStart(io, roomId) {
+  const room = rooms[roomId]
+  if (!room || room.status !== 'WAITING' || room.intervalId) {
+    console.log(`[Game] Auto-start ignored for room ${roomId}. Status is: ${room?.status}`)
+    return
+  }
+
+  try {
+    const playerCount = await getPlayerCount(roomId)
+    console.log(`[Game] Auto-start check for room ${roomId}. DB Players: ${playerCount}`)
+
+    if (playerCount >= 2 && room.status === 'WAITING' && !room.intervalId) {
+      console.log(`[Game] Starting countdown for room ${roomId} with ${playerCount} players.`)
+      await startCountdown(io, roomId)
+    }
+  } catch (err) {
+    console.error(`[Game] Auto-start check failed for room ${roomId}:`, err)
+  }
+}
+
 function initGameHandler(io) {
   io.on('connection', (socket) => {
     if (socket.data.userId) {
       socket.join(`user_${socket.data.userId}`)
     }
+
+    socket.on('check_auto_start', async ({ roomId } = {}) => {
+      const targetRoomId = String(
+        roomId || [...socket.rooms].find((joinedRoom) => (
+          joinedRoom !== socket.id && !joinedRoom.startsWith('user_')
+        )) || ''
+      )
+      if (!targetRoomId || !socket.rooms.has(targetRoomId)) return
+      await checkAutoStart(io, targetRoomId)
+    })
 
     socket.on('join_room', async ({ roomId, stake, spectator }) => {
       try {
@@ -575,18 +605,8 @@ function initGameHandler(io) {
         io.to(roomId).emit('players_updated', { count: playerCount })
         io.to(roomId).emit('room_update', { players: playerCount, stake: rooms[roomId].stake })
 
-        // 3. AUTO-START
-        if (rooms[roomId].status === 'WAITING' && playerCount >= 2) {
-          setTimeout(() => {
-            const activeRoom = rooms[roomId]
-            const activePlayerCount = activeRoom
-              ? new Set(Object.values(activeRoom.players).map((player) => String(player.userId))).size
-              : 0
-            if (activeRoom && activeRoom.status === 'WAITING' && activePlayerCount >= 2) {
-              startCountdown(io, roomId)
-            }
-          }, 2000)
-        }
+        // 3. AUTO-START based on registered room participants, not connected sockets.
+        await checkAutoStart(io, roomId)
       } catch (err) {
         console.error('[Game] Join room error:', err)
         socket.emit('error', { message: 'Server error' })
