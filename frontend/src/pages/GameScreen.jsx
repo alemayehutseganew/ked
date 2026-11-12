@@ -415,9 +415,7 @@ const GameScreen = () => {
         </div>
       ) : (
         <>
-      <div className="flex flex-1 flex-col gap-4 md:flex-row">
-        <div className="flex w-full flex-col gap-4 md:w-1/2">
-          <div className="mb-2 flex h-48 w-full items-center justify-center">
+          <div className="flex h-48 w-full shrink-0 items-center justify-center">
             {countdown !== null ? (
               <span className="text-7xl font-bold text-white">{formatTime(countdown)}</span>
             ) : currentBall ? (
@@ -426,63 +424,66 @@ const GameScreen = () => {
                 <span className="relative z-10 text-5xl font-black text-white drop-shadow-[0_5px_5px_rgba(0,0,0,0.6)] sm:text-6xl">{currentBall.letter}-{currentBall.number}</span>
               </div>
             ) : (
-              <span className="text-slate-400 font-bold">{t('waitingGame')}</span>
+              <span className="font-bold text-slate-400">{t('waitingGame')}</span>
             )}
           </div>
-          <div className="flex min-h-11 flex-wrap justify-center gap-2">
-            {calledHistory.map((ball, i) => (
-              <div key={i} className={`flex h-11 w-11 items-center justify-center rounded-full border border-white/30 text-sm font-bold text-white shadow-[0_4px_0_rgba(0,0,0,0.6)] ${getBallGradient(ball.letter)}`}>{ball.number}</div>
-            ))}
-          </div>
-          <div className="rounded-2xl border border-slate-600/50 bg-slate-800/80 p-2.5 shadow-2xl">
-            <div className="grid grid-cols-5 gap-1.5">
-              {['B', 'I', 'N', 'G', 'O'].map((letter) => (
-                <div key={letter} className={`flex min-h-11 items-center justify-center rounded-lg border-b-4 border-black/30 bg-gradient-to-b text-xl text-white shadow-md ibm-plex-mono-bold-italic ${letter === 'B' ? 'from-blue-600 to-blue-800' : letter === 'I' ? 'from-red-600 to-red-800' : letter === 'N' ? 'from-purple-600 to-purple-800' : letter === 'G' ? 'from-green-600 to-green-800' : 'from-yellow-500 to-yellow-700'}`}>{letter}</div>
-              ))}
-              {Array.from({ length: 15 }, (_, rowIndex) => (
-                <Fragment key={rowIndex}>
-                  {[0, 1, 2, 3, 4].map((colIndex) => {
-                    const num = rowIndex + 1 + (colIndex * 15);
-                    const isCalled = calledNumbers.includes(num);
-                    return (
-                      <div key={num} className={`flex min-h-11 min-w-11 items-center justify-center rounded-lg border text-sm ${isCalled ? 'border-amber-200/50 bg-gradient-to-b from-amber-300 to-amber-500 font-bold text-slate-950 shadow-[0_4px_0_#78350f]' : 'border-slate-700 bg-slate-900/80 text-slate-200 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]'}`}>{num}</div>
-                    );
-                  })}
-                </Fragment>
-              ))}
-            </div>
-          </div>
-        </div>
 
-        <div className="flex w-full flex-col items-center justify-center gap-4 py-2 md:w-1/2 md:py-6">
-          <div className="flex w-full flex-col items-center gap-4">
-            {cardsData && cardsData.length > 0 ? (
-              <div className="w-full rounded-2xl border border-slate-600/50 bg-slate-800/80 p-2.5 shadow-2xl sm:p-3">
-                <div className="mb-2 text-center text-lg font-bold text-slate-200">{t('cardNo', { number: cardsData[0]?.id || '?' })}</div>
-                <div className="mb-2 grid grid-cols-5 gap-1.5">
+          <div className="grid flex-1 grid-cols-1 items-start gap-3 sm:grid-cols-2">
+            <div className="flex min-w-0 flex-col gap-2">
+              <div className="flex min-h-11 flex-wrap justify-center gap-2">
+                {calledHistory.map((ball, i) => (
+                  <div key={i} className={`flex h-11 w-11 items-center justify-center rounded-full border border-white/30 text-sm font-bold text-white shadow-[0_4px_0_rgba(0,0,0,0.6)] ${getBallGradient(ball.letter)}`}>{ball.number}</div>
+                ))}
+              </div>
+              <div className="flex flex-col gap-1 overflow-hidden rounded-xl border border-slate-600/50 bg-slate-800/80 p-1.5 shadow-xl">
+                <div className="grid grid-cols-5 gap-1">
                   {['B', 'I', 'N', 'G', 'O'].map((letter) => (
-                    <div key={letter} className={`flex min-h-11 items-center justify-center rounded-lg border-b-4 border-black/30 bg-gradient-to-b text-xl text-white shadow-md ibm-plex-mono-bold-italic ${letter === 'B' ? 'from-blue-600 to-blue-800' : letter === 'I' ? 'from-red-600 to-red-800' : letter === 'N' ? 'from-purple-600 to-purple-800' : letter === 'G' ? 'from-green-600 to-green-800' : 'from-yellow-500 to-yellow-700'}`}>{letter}</div>
+                    <div key={letter} className={`rounded py-1 text-center text-xs font-black text-white shadow-md ${letter === 'B' ? 'bg-blue-600' : letter === 'I' ? 'bg-red-600' : letter === 'N' ? 'bg-purple-600' : letter === 'G' ? 'bg-green-600' : 'bg-yellow-500'}`}>{letter}</div>
                   ))}
                 </div>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {cardsData[0]?.matrix?.flat().map((num, index) => {
-                    const isFree = index === 12 || num === 'FREE';
-                    const isMarked = isFree || markedNumbers.includes(num);
-                    return (
-                      <button key={index} onClick={() => !isFree && handleDaub(num)} className={`flex aspect-square min-h-11 min-w-11 items-center justify-center rounded-xl border font-bold text-base transition-all duration-150 sm:text-lg ${isMarked ? 'scale-[0.98] border-slate-700 bg-slate-900 text-emerald-300 shadow-[inset_0_6px_12px_rgba(0,0,0,0.9)]' : 'border-slate-300 bg-slate-100 text-slate-900 shadow-[0_5px_0_rgb(148,163,184)] active:translate-y-1 active:shadow-none'}`}>
-                        {isFree ? 'F' : num}
-                      </button>
-                    );
-                  })}
+                <div className="grid grid-cols-5 gap-1 text-[10px] sm:text-xs">
+                  {Array.from({ length: 15 }, (_, rowIndex) => (
+                    <Fragment key={rowIndex}>
+                      {[0, 1, 2, 3, 4].map((colIndex) => {
+                        const num = rowIndex + 1 + (colIndex * 15);
+                        const isCalled = calledNumbers.includes(num);
+                        return (
+                          <div key={num} className={`flex aspect-square min-w-0 items-center justify-center rounded border ${isCalled ? 'border-amber-200/50 bg-gradient-to-b from-amber-300 to-amber-500 font-bold text-slate-950 shadow-[0_3px_0_#78350f]' : 'border-slate-700 bg-slate-900 text-slate-400 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]'}`}>{num}</div>
+                        );
+                      })}
+                    </Fragment>
+                  ))}
                 </div>
               </div>
-            ) : (
-              <div className="text-white text-center mt-10">{t('loadingCard')}</div>
-            )}
-            <button onClick={handleBingoClick} className="min-h-12 w-full max-w-sm rounded-xl border border-amber-300 bg-gradient-to-b from-yellow-300 to-amber-500 py-3 text-2xl font-extrabold text-slate-900 shadow-[0_5px_0_#92400e] transition-all active:translate-y-1 active:shadow-none">{t('bingo')}</button>
+            </div>
+
+            <div className="flex min-w-0 flex-col items-center gap-3">
+              {cardsData && cardsData.length > 0 ? (
+                <div className="w-full rounded-xl border border-slate-600/50 bg-slate-800/80 p-1.5 shadow-xl sm:p-2">
+                  <div className="mb-1 text-center text-xs font-bold text-slate-300 sm:text-sm">{t('cardNo', { number: cardsData[0]?.id || '?' })}</div>
+                  <div className="mb-1 grid grid-cols-5 gap-1">
+                    {['B', 'I', 'N', 'G', 'O'].map((letter) => (
+                      <div key={letter} className={`flex min-h-8 items-center justify-center rounded border-b-2 border-black/30 bg-gradient-to-b text-xs font-black text-white shadow-md ${letter === 'B' ? 'from-blue-600 to-blue-800' : letter === 'I' ? 'from-red-600 to-red-800' : letter === 'N' ? 'from-purple-600 to-purple-800' : letter === 'G' ? 'from-green-600 to-green-800' : 'from-yellow-500 to-yellow-700'}`}>{letter}</div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-5 gap-1">
+                    {cardsData[0]?.matrix?.flat().map((num, index) => {
+                      const isFree = index === 12 || num === 'FREE';
+                      const isMarked = isFree || markedNumbers.includes(num);
+                      return (
+                        <button key={index} onClick={() => !isFree && handleDaub(num)} className={`flex aspect-square min-h-11 min-w-11 items-center justify-center rounded-lg border text-xs font-bold transition-all duration-150 sm:text-sm ${isMarked ? 'scale-[0.98] border-slate-700 bg-slate-900 text-emerald-300 shadow-[inset_0_4px_8px_rgba(0,0,0,0.9)]' : 'border-slate-300 bg-slate-100 text-slate-900 shadow-[0_3px_0_rgb(148,163,184)] active:translate-y-0.5 active:shadow-none'}`}>
+                          {isFree ? 'F' : num}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-10 text-center text-white">{t('loadingCard')}</div>
+              )}
+              <button onClick={handleBingoClick} className="min-h-12 w-full max-w-sm rounded-xl border border-amber-300 bg-gradient-to-b from-yellow-300 to-amber-500 py-3 text-2xl font-extrabold text-slate-900 shadow-[0_5px_0_#92400e] transition-all active:translate-y-1 active:shadow-none">{t('bingo')}</button>
+            </div>
           </div>
-        </div>
-      </div>
         </>
       )}
 

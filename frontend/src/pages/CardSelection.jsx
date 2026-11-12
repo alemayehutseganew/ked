@@ -294,7 +294,7 @@ export default function CardSelection({
             </div>
           )}
 
-          <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8 md:grid-cols-10 md:gap-2">
+          <div className="grid grid-cols-6 gap-1 p-2 sm:grid-cols-8 sm:gap-1.5 md:grid-cols-10">
             {Array.from({ length: 400 }, (_, i) => i + 1).map((cardNumber) => {
               const isSelected = currentSelectedCard === cardNumber;
               const isTaken = takenCards.includes(cardNumber) && !isSelected;
@@ -307,12 +307,12 @@ export default function CardSelection({
                   disabled={isDisabled}
                   aria-pressed={isSelected}
                   onClick={() => handleCardSelect(cardNumber)}
-                  className={`relative flex items-center justify-center rounded-md border px-1 py-1 text-xs font-bold transition-all duration-100 touch-manipulation ${
+                  className={`relative flex h-9 items-center justify-center rounded-md border border-b-2 px-1 text-[10px] font-bold transition-all duration-100 touch-manipulation sm:h-10 sm:text-xs ${
                     isSelected
-                      ? 'border-blue-700 border-b-4 bg-blue-500 text-white shadow-[0_3px_0_rgb(29,78,216)] active:translate-y-1 active:shadow-none'
+                      ? 'border-blue-700 bg-gradient-to-b from-blue-400 to-blue-600 text-white shadow-[0_2px_0_rgb(29,78,216)] active:translate-y-0.5 active:shadow-none'
                       : isTaken || selectionLocked || loading
-                        ? 'cursor-not-allowed border-gray-900 border-b-4 bg-gray-800 text-gray-600 opacity-60'
-                        : 'border-gray-300 border-b-4 bg-white text-black shadow-[0_3px_0_rgb(156,163,175)] hover:-translate-y-0.5 hover:shadow-[0_4px_0_rgb(156,163,175)] active:translate-y-1 active:shadow-none'
+                        ? 'cursor-not-allowed border-gray-900 bg-gradient-to-b from-gray-700 to-gray-900 text-gray-400 opacity-60'
+                        : 'border-gray-300 bg-gradient-to-b from-white to-slate-100 text-black shadow-[0_2px_0_rgb(156,163,175)] hover:-translate-y-0.5 hover:shadow-[0_3px_0_rgb(156,163,175)] active:translate-y-0.5 active:shadow-none'
                   }`}
                 >
                   {cardNumber}
