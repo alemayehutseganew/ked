@@ -22,6 +22,17 @@ const getBallColor = (letter) => {
   }
 };
 
+const getBallGradient = (letter) => {
+  switch (letter) {
+    case 'B': return 'bg-[radial-gradient(circle_at_30%_25%,#93c5fd,#2563eb_55%,#1e3a8a)]';
+    case 'I': return 'bg-[radial-gradient(circle_at_30%_25%,#fca5a5,#dc2626_55%,#7f1d1d)]';
+    case 'N': return 'bg-[radial-gradient(circle_at_30%_25%,#d8b4fe,#9333ea_55%,#581c87)]';
+    case 'G': return 'bg-[radial-gradient(circle_at_30%_25%,#86efac,#16a34a_55%,#14532d)]';
+    case 'O': return 'bg-[radial-gradient(circle_at_30%_25%,#fde68a,#f59e0b_55%,#9a3412)]';
+    default: return 'bg-[radial-gradient(circle_at_30%_25%,#d1d5db,#6b7280_55%,#374151)]';
+  }
+};
+
 const GameScreen = () => {
   const socket = SocketService.get() || SocketService.connect()
   const [searchParams] = useSearchParams();
@@ -231,54 +242,62 @@ const GameScreen = () => {
 
   if (isSpectator) {
     return (
-      <div className="min-h-screen bg-[#1e3a5f] text-white p-4 font-sans">
+      <div className="min-h-screen bg-gradient-to-b from-[#0f172a] via-[#1e293b] to-[#020617] p-3 font-sans text-white">
         <div className="mx-auto w-full max-w-5xl">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md bg-[#112A46] p-3 shadow-md">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-600/50 bg-slate-800/60 p-2.5 shadow-2xl backdrop-blur-lg">
             <div className="flex flex-wrap gap-2 text-xs font-bold sm:text-sm">
-              <div className="rounded bg-[#2A4B6E] px-3 py-1">{t('win')}: --</div>
-              <div className="rounded bg-[#2A4B6E] px-3 py-1">{t('stake')}: {stake || '--'}</div>
-              <div className="rounded bg-[#2A4B6E] px-3 py-1">
-                {t('call')}: {spectatorBall ? `${spectatorBall.letter}-${spectatorBall.number}` : '--'}
+              <div className="flex min-h-11 items-center gap-1 rounded-xl border border-slate-700 bg-slate-900/80 px-3 shadow-inner">
+                <span className="text-slate-400">{t('win')}:</span><span className="text-emerald-400">--</span>
               </div>
-              <div className="rounded bg-[#2A4B6E] px-3 py-1">{t('players')}: {playersCount}</div>
+              <div className="flex min-h-11 items-center gap-1 rounded-xl border border-slate-700 bg-slate-900/80 px-3 shadow-inner">
+                <span className="text-slate-400">{t('stake')}:</span><span className="text-blue-400">{stake || '--'}</span>
+              </div>
+              <div className="flex min-h-11 items-center gap-1 rounded-xl border border-slate-700 bg-slate-900/80 px-3 shadow-inner">
+                <span className="text-slate-400">{t('call')}:</span>
+                <span className="text-amber-300">{spectatorBall ? `${spectatorBall.letter}-${spectatorBall.number}` : '--'}</span>
+              </div>
+              <div className="flex min-h-11 items-center gap-1 rounded-xl border border-slate-700 bg-slate-900/80 px-3 shadow-inner">
+                <span className="text-slate-400">{t('players')}:</span><span className="text-purple-300">{playersCount}</span>
+              </div>
             </div>
-            <div className="flex gap-1 text-xs">
-              <button onClick={() => i18n.changeLanguage(i18n.language === 'en' ? 'am' : 'en')} className="rounded bg-[#2A4B6E] px-3 py-1 hover:bg-[#3A5B7E]">
+            <div className="ml-auto flex gap-2 text-xs">
+              <button onClick={() => i18n.changeLanguage(i18n.language === 'en' ? 'am' : 'en')} className="flex h-11 min-w-11 items-center justify-center rounded-full bg-slate-700 px-3 font-bold text-white shadow-[0_4px_0_rgb(51,65,85)] transition-all active:translate-y-1 active:shadow-none">
                 {i18n.language === 'en' ? 'AM' : 'EN'}
               </button>
               <button
                 type="button"
                 aria-label={isMuted ? t('unmuteSound') : t('muteSound')}
                 onClick={() => setIsMuted(toggleMute())}
-                className="ml-2 rounded-full bg-gray-800 p-2 text-white hover:bg-gray-700"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-700 text-white shadow-[0_4px_0_rgb(51,65,85)] transition-all active:translate-y-1 active:shadow-none"
               >
                 {isMuted ? '\u{1F507}' : '\u{1F50A}'}
               </button>
             </div>
           </div>
 
-          <div className="mb-4 rounded-xl border border-blue-500 bg-blue-900/90 p-4 text-center shadow-lg">
-            <p className="mb-1 text-lg font-bold">{t('pleaseWait')}</p>
+          <div className="mb-4 rounded-2xl border border-blue-400/40 bg-blue-950/70 p-4 text-center shadow-xl backdrop-blur">
+            <p className="mb-1 text-lg font-bold text-blue-100">{t('pleaseWait')}</p>
             <p className="text-sm text-blue-200">{t('gameInProgress')}</p>
-            <p className="mt-2 text-xs text-gray-400">{t('gameInProgressContinuation')}</p>
+            <p className="mt-2 text-xs text-slate-400">{t('gameInProgressContinuation')}</p>
           </div>
 
-          <div className="rounded-xl border border-blue-900 bg-[#112A46] p-4 shadow-2xl sm:p-6">
+          <div className="rounded-2xl border border-slate-600/50 bg-slate-800/80 p-3 shadow-2xl sm:p-6">
             <div className="mb-5 flex flex-col items-center">
               {spectatorBall ? (
-                <div className={`flex h-36 w-36 flex-col items-center justify-center rounded-full border-8 shadow-xl ${getBallColor(spectatorBall.letter)}`}>
-                  <span className="mt-1 text-2xl font-bold text-white">{spectatorBall.letter}</span>
-                  <span className="text-6xl font-bold text-white">{spectatorBall.number}</span>
+                <div className={`relative flex h-36 w-36 flex-col items-center justify-center rounded-full border border-white/30 shadow-[0_20px_40px_rgba(0,0,0,0.6),inset_0_-10px_20px_rgba(0,0,0,0.55),inset_0_8px_18px_rgba(255,255,255,0.45)] ${getBallGradient(spectatorBall.letter)}`}>
+                  <div className="pointer-events-none absolute left-4 top-3 h-7 w-24 -rotate-12 rounded-full bg-white/35 blur-md" />
+                  <span className="relative mt-1 text-2xl font-bold text-white drop-shadow-md">{spectatorBall.letter}</span>
+                  <span className="relative text-6xl font-black text-white drop-shadow-[0_5px_5px_rgba(0,0,0,0.6)]">{spectatorBall.number}</span>
                 </div>
               ) : (
-                <div className="flex h-36 w-36 animate-pulse items-center justify-center rounded-full bg-gray-600">
+                <div className="flex h-36 w-36 animate-pulse items-center justify-center rounded-full bg-slate-600 shadow-[0_20px_40px_rgba(0,0,0,0.6),inset_0_8px_18px_rgba(255,255,255,0.25)]">
                   <span className="text-4xl text-white">-</span>
                 </div>
               )}
-              <p className="mt-2 text-sm text-gray-300">{t('ballsCalled', { count: spectatorNumbers.length })}</p>
+              <p className="mt-3 text-sm text-slate-300">{t('ballsCalled', { count: spectatorNumbers.length })}</p>
             </div>
 
-            <div className="mb-4 flex min-h-10 justify-center gap-2">
+            <div className="mb-4 flex min-h-11 flex-wrap justify-center gap-2">
               {spectatorHistory.slice(-5).reverse().map((num) => {
                 let letter = 'B';
                 if (num > 15) letter = 'I';
@@ -286,14 +305,14 @@ const GameScreen = () => {
                 if (num > 45) letter = 'G';
                 if (num > 60) letter = 'O';
                 return (
-                  <div key={num} className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold ${getBallColor(letter)}`}>
+                  <div key={num} className={`flex h-11 w-11 items-center justify-center rounded-full border border-white/30 text-sm font-bold text-white shadow-[0_4px_0_rgba(0,0,0,0.6)] ${getBallGradient(letter)}`}>
                     {num}
                   </div>
                 );
               })}
             </div>
 
-            <div className="grid max-h-80 grid-cols-5 gap-1 overflow-y-auto rounded-lg bg-[#0d1f33] p-2 sm:grid-cols-10">
+            <div className="grid max-h-80 grid-cols-5 gap-1.5 overflow-y-auto rounded-xl border border-slate-700 bg-slate-950/70 p-2 sm:grid-cols-10">
               {Array.from({ length: 75 }, (_, i) => i + 1).map((num) => {
                 const isCalled = spectatorNumbers.includes(num);
                 let letter = 'B';
@@ -302,7 +321,7 @@ const GameScreen = () => {
                 if (num > 45) letter = 'G';
                 if (num > 60) letter = 'O';
                 return (
-                  <div key={num} className={`rounded py-1 text-center text-xs ${isCalled ? `${getBallColor(letter).split(' ')[0]} font-bold text-white` : 'bg-[#1e3a5f] text-gray-500'}`}>
+                  <div key={num} className={`flex min-h-11 min-w-11 items-center justify-center rounded-lg border text-sm ${isCalled ? `${getBallColor(letter).split(' ')[0]} border-white/20 font-bold text-white shadow-[0_3px_0_rgba(0,0,0,0.5)]` : 'border-slate-700 bg-slate-800 text-slate-500'}`}>
                     {num}
                   </div>
                 );
@@ -343,23 +362,31 @@ const GameScreen = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#1e3a5f] text-white p-2 font-sans flex flex-col">
-      <div className="relative z-[60] flex flex-wrap items-center justify-between gap-1 mb-4 bg-[#112A46] p-2 rounded-md shadow-md">
-        <div className="flex gap-2 text-xs font-bold">
-          <div className="bg-[#2A4B6E] px-3 py-1 rounded">{t('win')}: {gameStarted ? '0' : '--'}</div>
-          <div className="bg-[#2A4B6E] px-3 py-1 rounded">{t('stake')}: {stake || '--'}</div>
-          <div className="bg-[#2A4B6E] px-3 py-1 rounded">{t('call')}: {gameStarted ? calledNumbers.length : '--'}</div>
-          <div className="bg-[#2A4B6E] px-3 py-1 rounded">{t('players')}: {playersCount}</div>
+    <div className="min-h-screen bg-gradient-to-b from-[#0f172a] via-[#1e293b] to-[#020617] p-3 font-sans text-white">
+      <div className="relative z-[60] mb-4 flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-600/50 bg-slate-800/60 p-2.5 shadow-2xl backdrop-blur-lg">
+        <div className="flex flex-wrap gap-2 text-xs font-bold sm:text-sm">
+          <div className="flex min-h-11 items-center gap-1 rounded-xl border border-slate-700 bg-slate-900/80 px-3 shadow-inner">
+            <span className="text-slate-400">{t('win')}:</span><span className="text-emerald-400">{gameStarted ? '0' : '--'}</span>
+          </div>
+          <div className="flex min-h-11 items-center gap-1 rounded-xl border border-slate-700 bg-slate-900/80 px-3 shadow-inner">
+            <span className="text-slate-400">{t('stake')}:</span><span className="text-blue-400">{stake || '--'}</span>
+          </div>
+          <div className="flex min-h-11 items-center gap-1 rounded-xl border border-slate-700 bg-slate-900/80 px-3 shadow-inner">
+            <span className="text-slate-400">{t('call')}:</span><span className="text-amber-300">{gameStarted ? calledNumbers.length : '--'}</span>
+          </div>
+          <div className="flex min-h-11 items-center gap-1 rounded-xl border border-slate-700 bg-slate-900/80 px-3 shadow-inner">
+            <span className="text-slate-400">{t('players')}:</span><span className="text-purple-300">{playersCount}</span>
+          </div>
         </div>
-        <div className="flex gap-1 text-xs">
-          <button onClick={() => i18n.changeLanguage(i18n.language === 'en' ? 'am' : 'en')} className="bg-[#2A4B6E] px-3 py-1 rounded hover:bg-[#3A5B7E]">
+        <div className="ml-auto flex gap-2 text-xs">
+          <button onClick={() => i18n.changeLanguage(i18n.language === 'en' ? 'am' : 'en')} className="flex h-11 min-w-11 items-center justify-center rounded-full bg-slate-700 px-3 font-bold text-white shadow-[0_4px_0_rgb(51,65,85)] transition-all active:translate-y-1 active:shadow-none">
             {i18n.language === 'en' ? 'AM' : 'EN'}
           </button>
           <button
             type="button"
             aria-label={isMuted ? t('unmuteSound') : t('muteSound')}
             onClick={() => setIsMuted(toggleMute())}
-            className="ml-2 rounded-full bg-gray-800 p-2 text-white hover:bg-gray-700"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-700 text-white shadow-[0_4px_0_rgb(51,65,85)] transition-all active:translate-y-1 active:shadow-none"
           >
             {isMuted ? '\u{1F507}' : '\u{1F50A}'}
           </button>
@@ -381,35 +408,36 @@ const GameScreen = () => {
         </div>
       )}
       {!gameStarted && countdown === null ? (
-        <div className="flex-1 flex justify-center items-center text-gray-400">
+        <div className="flex flex-1 items-center justify-center text-slate-400">
           {t('waitingPlayersLine1')}
           <br />
           {t('waitingPlayersLine2')}
         </div>
       ) : (
         <>
-      <div className="flex flex-row gap-2 flex-1">
-        <div className="w-1/2 flex flex-col gap-4">
-          <div className="w-full h-40 flex items-center justify-center mb-4">
+      <div className="flex flex-1 flex-col gap-4 md:flex-row">
+        <div className="flex w-full flex-col gap-4 md:w-1/2">
+          <div className="mb-2 flex h-48 w-full items-center justify-center">
             {countdown !== null ? (
               <span className="text-7xl font-bold text-white">{formatTime(countdown)}</span>
             ) : currentBall ? (
-              <div className={`w-40 h-40 rounded-full border-8 flex items-center justify-center shadow-2xl ${getBallColor(currentBall.letter)}`}>
-                <span className="text-5xl font-black text-white">{currentBall.letter}-{currentBall.number}</span>
+              <div className={`relative flex h-40 w-40 items-center justify-center rounded-full border border-white/30 shadow-[0_20px_40px_rgba(0,0,0,0.6),inset_0_-10px_20px_rgba(0,0,0,0.6),inset_0_10px_20px_rgba(255,255,255,0.4)] sm:h-48 sm:w-48 ${getBallGradient(currentBall.letter)}`}>
+                <div className="pointer-events-none absolute left-5 top-4 h-10 w-32 -rotate-12 rounded-full bg-white/35 blur-md" />
+                <span className="relative z-10 text-5xl font-black text-white drop-shadow-[0_5px_5px_rgba(0,0,0,0.6)] sm:text-6xl">{currentBall.letter}-{currentBall.number}</span>
               </div>
             ) : (
-              <span className="text-gray-400 font-bold">{t('waitingGame')}</span>
+              <span className="text-slate-400 font-bold">{t('waitingGame')}</span>
             )}
           </div>
-          <div className="flex gap-2 justify-center h-10">
+          <div className="flex min-h-11 flex-wrap justify-center gap-2">
             {calledHistory.map((ball, i) => (
-              <div key={i} className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-sm ${getBallColor(ball.letter)}`}>{ball.number}</div>
+              <div key={i} className={`flex h-11 w-11 items-center justify-center rounded-full border border-white/30 text-sm font-bold text-white shadow-[0_4px_0_rgba(0,0,0,0.6)] ${getBallGradient(ball.letter)}`}>{ball.number}</div>
             ))}
           </div>
-          <div className="bg-[#4a5568] p-2 rounded-lg shadow-md">
-            <div className="grid grid-cols-5 gap-1">
+          <div className="rounded-2xl border border-slate-600/50 bg-slate-800/80 p-2.5 shadow-2xl">
+            <div className="grid grid-cols-5 gap-1.5">
               {['B', 'I', 'N', 'G', 'O'].map((letter) => (
-                <div key={letter} className={`text-center text-xl py-1 rounded text-white ibm-plex-mono-bold-italic ${getBallColor(letter).split(' ')[0]}`}>{letter}</div>
+                <div key={letter} className={`flex min-h-11 items-center justify-center rounded-lg border-b-4 border-black/30 bg-gradient-to-b text-xl text-white shadow-md ibm-plex-mono-bold-italic ${letter === 'B' ? 'from-blue-600 to-blue-800' : letter === 'I' ? 'from-red-600 to-red-800' : letter === 'N' ? 'from-purple-600 to-purple-800' : letter === 'G' ? 'from-green-600 to-green-800' : 'from-yellow-500 to-yellow-700'}`}>{letter}</div>
               ))}
               {Array.from({ length: 15 }, (_, rowIndex) => (
                 <Fragment key={rowIndex}>
@@ -417,7 +445,7 @@ const GameScreen = () => {
                     const num = rowIndex + 1 + (colIndex * 15);
                     const isCalled = calledNumbers.includes(num);
                     return (
-                      <div key={num} className={`text-center text-sm py-1.5 rounded ${isCalled ? 'bg-yellow-400 text-black font-bold' : 'bg-[#1e3a5f] text-white'}`}>{num}</div>
+                      <div key={num} className={`flex min-h-11 min-w-11 items-center justify-center rounded-lg border text-sm ${isCalled ? 'border-amber-200/50 bg-gradient-to-b from-amber-300 to-amber-500 font-bold text-slate-950 shadow-[0_4px_0_#78350f]' : 'border-slate-700 bg-slate-900/80 text-slate-200 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]'}`}>{num}</div>
                     );
                   })}
                 </Fragment>
@@ -426,22 +454,22 @@ const GameScreen = () => {
           </div>
         </div>
 
-        <div className="w-1/2 flex flex-col justify-center items-center gap-4 py-10">
-          <div className="w-full flex flex-col items-center gap-4">
+        <div className="flex w-full flex-col items-center justify-center gap-4 py-2 md:w-1/2 md:py-6">
+          <div className="flex w-full flex-col items-center gap-4">
             {cardsData && cardsData.length > 0 ? (
-              <div className="bg-[#4a5568] p-3 rounded-xl shadow-lg">
-                <div className="text-center font-bold text-lg mb-2 text-gray-200">{t('cardNo', { number: cardsData[0]?.id || '?' })}</div>
-                <div className="grid grid-cols-5 gap-1 mb-2">
+              <div className="w-full rounded-2xl border border-slate-600/50 bg-slate-800/80 p-2.5 shadow-2xl sm:p-3">
+                <div className="mb-2 text-center text-lg font-bold text-slate-200">{t('cardNo', { number: cardsData[0]?.id || '?' })}</div>
+                <div className="mb-2 grid grid-cols-5 gap-1.5">
                   {['B', 'I', 'N', 'G', 'O'].map((letter) => (
-                    <div key={letter} className={`text-center text-xl py-1 rounded text-white ibm-plex-mono-bold-italic ${getBallColor(letter).split(' ')[0]}`}>{letter}</div>
+                    <div key={letter} className={`flex min-h-11 items-center justify-center rounded-lg border-b-4 border-black/30 bg-gradient-to-b text-xl text-white shadow-md ibm-plex-mono-bold-italic ${letter === 'B' ? 'from-blue-600 to-blue-800' : letter === 'I' ? 'from-red-600 to-red-800' : letter === 'N' ? 'from-purple-600 to-purple-800' : letter === 'G' ? 'from-green-600 to-green-800' : 'from-yellow-500 to-yellow-700'}`}>{letter}</div>
                   ))}
                 </div>
-                <div className="grid grid-cols-5 gap-1">
+                <div className="grid grid-cols-5 gap-1.5">
                   {cardsData[0]?.matrix?.flat().map((num, index) => {
                     const isFree = index === 12 || num === 'FREE';
                     const isMarked = isFree || markedNumbers.includes(num);
                     return (
-                      <button key={index} onClick={() => !isFree && handleDaub(num)} className={`aspect-square flex items-center justify-center font-bold text-lg rounded-md shadow-sm transition-transform ${isFree ? 'bg-blue-600 text-white border-b-0 transform translate-y-1' : isMarked ? 'bg-green-500 text-white border-b-0 transform translate-y-1' : 'bg-white text-black border-b-4 border-gray-300 hover:bg-gray-100'}`}>
+                      <button key={index} onClick={() => !isFree && handleDaub(num)} className={`flex aspect-square min-h-11 min-w-11 items-center justify-center rounded-xl border font-bold text-base transition-all duration-150 sm:text-lg ${isMarked ? 'scale-[0.98] border-slate-700 bg-slate-900 text-emerald-300 shadow-[inset_0_6px_12px_rgba(0,0,0,0.9)]' : 'border-slate-300 bg-slate-100 text-slate-900 shadow-[0_5px_0_rgb(148,163,184)] active:translate-y-1 active:shadow-none'}`}>
                         {isFree ? 'F' : num}
                       </button>
                     );
@@ -451,7 +479,7 @@ const GameScreen = () => {
             ) : (
               <div className="text-white text-center mt-10">{t('loadingCard')}</div>
             )}
-            <button onClick={handleBingoClick} className="w-full max-w-sm bg-yellow-500 text-[#112A46] font-extrabold text-2xl py-4 rounded-xl shadow-lg">{t('bingo')}</button>
+            <button onClick={handleBingoClick} className="min-h-12 w-full max-w-sm rounded-xl border border-amber-300 bg-gradient-to-b from-yellow-300 to-amber-500 py-3 text-2xl font-extrabold text-slate-900 shadow-[0_5px_0_#92400e] transition-all active:translate-y-1 active:shadow-none">{t('bingo')}</button>
           </div>
         </div>
       </div>
