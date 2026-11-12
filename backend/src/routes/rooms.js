@@ -89,7 +89,7 @@ router.post('/join', userAuth, async (req, res) => {
 
       const activeRoom = await trx('game_rooms')
         .where({ stake_amount: stake })
-        .whereIn('status', ['COUNTDOWN', 'PLAYING', 'CLAIMING'])
+        .whereIn('status', ['WAITING', 'COUNTDOWN', 'PLAYING', 'CLAIMING'])
         .orderBy('created_at', 'desc')
         .forUpdate()
         .first()
@@ -117,9 +117,11 @@ router.post('/join', userAuth, async (req, res) => {
           .first()
         if (activeRoom.status === 'COUNTDOWN') {
           room = activeRoom
+        } else if (existing && activeRoom.status === 'WAITING') {
+          room = activeRoom
         } else if (existing) {
           throw new Error('CARD_CHANGE_LOCKED')
-        } else {
+        } else if (['PLAYING', 'CLAIMING'].includes(activeRoom.status)) {
           return { status: 'spectator', room: activeRoom }
         }
       }

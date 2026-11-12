@@ -32,12 +32,24 @@ export default function CardSelection({
   const rawStake = searchParams.get('stake');
   const stake = rawStake ? Number(rawStake) || 10 : 10;
   const roomId = searchParams.get('roomId');
+  const [activeRoomId, setActiveRoomId] = useState(() => {
+    if (roomId) return roomId;
+
+    const savedRoom = localStorage.getItem('activeGameRoom');
+    if (!savedRoom) return null;
+
+    try {
+      return JSON.parse(savedRoom)?.roomId || null;
+    } catch (err) {
+      console.error('Saved active room data is invalid:', err);
+      return null;
+    }
+  });
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { balance } = useWallet();
 
   const [takenCards, setTakenCards] = useState([]);
-  const [waitingRoomId, setWaitingRoomId] = useState(null);
   const [socketPlayersCount, setSocketPlayersCount] = useState(null);
   const [socketCountdown, setSocketCountdown] = useState(undefined);
   const [selectedCard, setSelectedCard] = useState(null);
@@ -45,7 +57,6 @@ export default function CardSelection({
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'error' });
   const [toastVisible, setToastVisible] = useState(false);
-  const activeRoomId = roomId || waitingRoomId;
   const displayedPlayersCount = socketPlayersCount ?? playersCount;
   const displayedCountdown = socketCountdown !== undefined ? socketCountdown : countdown;
   const currentSelectedCard = selectedCard ?? (cardData?.id ? Number(cardData.id) : null);
@@ -75,7 +86,7 @@ export default function CardSelection({
   }, [toast]);
 
   useEffect(() => {
-    if (roomId) return undefined;
+    if (activeRoomId) return undefined;
 
     let active = true;
     const fetchWaitingRoom = async () => {
@@ -84,7 +95,7 @@ export default function CardSelection({
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to fetch waiting room.');
         if (!active) return;
-        setWaitingRoomId(data.roomId || null);
+        setActiveRoomId(data.roomId || null);
         setSocketPlayersCount(Number(data.playerCount) || 0);
       } catch (err) {
         console.error('Failed to fetch waiting room', err);
@@ -95,7 +106,7 @@ export default function CardSelection({
     return () => {
       active = false;
     };
-  }, [roomId, stake]);
+  }, [activeRoomId, stake]);
 
   useEffect(() => {
     const fetchTakenCards = async () => {
@@ -192,11 +203,11 @@ export default function CardSelection({
     if (selectionLocked || loading) return;
 
     if (cardNumber === currentSelectedCard) {
-      if (!roomId) return;
+      if (!activeRoomId) return;
 
       setLoading(true);
       try {
-        const res = await fetchApi(`/rooms/${encodeURIComponent(roomId)}/my-card`, {
+        const res = await fetchApi(`/rooms/${encodeURIComponent(activeRoomId)}/my-card`, {
           method: 'DELETE',
         });
         const data = await res.json();
@@ -255,7 +266,8 @@ export default function CardSelection({
         return;
       }
 
-      const joinedRoomId = data.roomId || roomId;
+      const joinedRoomId = data.roomId || activeRoomId;
+      setActiveRoomId(joinedRoomId);
       SocketService.connect().emit('join_room', {
         roomId: joinedRoomId,
         stake: Number(data.stake || stake),
