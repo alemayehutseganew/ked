@@ -302,7 +302,7 @@ export default function CardSelection({
             </div>
           )}
 
-          <div className="mx-auto grid max-w-lg grid-cols-6 gap-1 p-2 sm:grid-cols-8 sm:gap-1.5">
+          <div className="mx-auto grid max-w-lg grid-cols-6 gap-1 p-2 sm:grid-cols-8">
             {Array.from({ length: 400 }, (_, i) => i + 1).map((cardNumber) => {
               const isSelected = currentSelectedCard === cardNumber;
               const isTaken = takenCards.includes(cardNumber) && !isSelected;
@@ -315,7 +315,7 @@ export default function CardSelection({
                   disabled={isDisabled}
                   aria-pressed={isSelected}
                   onClick={() => handleCardSelect(cardNumber)}
-                  className={`relative flex h-9 select-none items-center justify-center rounded-lg border px-1 text-xs font-bold transition-all duration-100 touch-manipulation sm:h-10 sm:text-sm ${
+                  className={`relative flex h-7 select-none items-center justify-center rounded-lg border px-1 text-[11px] font-bold transition-all duration-100 touch-manipulation sm:h-8 ${
                     isSelected
                       ? 'scale-[0.96] border-blue-900 bg-gradient-to-b from-blue-400 to-blue-600 text-white shadow-[inset_0_4px_8px_rgba(0,0,0,0.4)]'
                       : isTaken
@@ -378,9 +378,6 @@ export default function CardSelection({
                 </div>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-blue-200 sm:text-xs">
                   {t('waitingPlayers')}
-                </span>
-                <span className="text-[9px] text-slate-400">
-                  ({displayedPlayersCount}/2)
                 </span>
               </div>
             ) : hasCountdown ? (
