@@ -25,6 +25,7 @@ export default function CardSelection({
   const { t } = useTranslation();
 
   const [takenCards, setTakenCards] = useState([]);
+  const [livePlayersCount, setLivePlayersCount] = useState(playersCount);
   const [selectedCard, setSelectedCard] = useState(cardData?.id ? Number(cardData.id) : null);
   const [selectedMatrix, setSelectedMatrix] = useState(cardData?.matrix || null);
   const [loading, setLoading] = useState(false);
@@ -49,6 +50,26 @@ export default function CardSelection({
     };
     fetchTakenCards();
   }, [stake]);
+
+  useEffect(() => {
+    const socket = SocketService.connect();
+    const handlePlayersUpdated = (data) => {
+      const count = Number(data?.count);
+      if (Number.isFinite(count)) setLivePlayersCount(count);
+    };
+    const joinRoom = () => socket.emit('join_room', { roomId, stake: Number(stake) });
+
+    socket.on('players_updated', handlePlayersUpdated);
+    if (roomId && !onCardUpdated) {
+      if (socket.connected) joinRoom();
+      else socket.on('connect', joinRoom);
+    }
+
+    return () => {
+      socket.off('players_updated', handlePlayersUpdated);
+      socket.off('connect', joinRoom);
+    };
+  }, [onCardUpdated, roomId, stake]);
 
   useEffect(() => {
     if (!roomId || onCardUpdated) return undefined;
@@ -134,12 +155,23 @@ export default function CardSelection({
       }
 
       if (data.status === 'spectator') {
+        SocketService.connect().emit('join_room', {
+          roomId: data.roomId,
+          stake: Number(data.stake || stake),
+          spectator: true,
+        });
         navigate(`/game?roomId=${data.roomId}&stake=${stake}&spectator=true`);
         return;
       }
 
+      const joinedRoomId = data.roomId || roomId;
+      SocketService.connect().emit('join_room', {
+        roomId: joinedRoomId,
+        stake: Number(data.stake || stake),
+      });
+
       localStorage.setItem('activeGameRoom', JSON.stringify({
-        roomId: data.roomId || roomId,
+        roomId: joinedRoomId,
         stake: Number(data.stake || stake),
       }));
 
@@ -200,7 +232,7 @@ export default function CardSelection({
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                 </span>
-                {t('players') || 'Players'}: {playersCount}
+                {t('players') || 'Players'}: {livePlayersCount}
               </div>
 
               <h1 className="whitespace-nowrap bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-right text-xl font-extrabold tracking-tight text-transparent drop-shadow-sm sm:text-2xl">

@@ -205,6 +205,17 @@ router.post('/join', userAuth, async (req, res) => {
        })
     }
 
+    const io = req.app.get('io')
+    if (io) {
+      const countResult = await db('room_participants')
+        .where({ room_id: result.room.id })
+        .count('* as count')
+        .first()
+      io.to(String(result.room.id)).emit('players_updated', {
+        count: Number(countResult.count),
+      })
+    }
+
     console.log('[join] Sending response:', result.room.id)
     return res.json({ roomId: result.room.id, stake: result.room.stake_amount, card: result.card })
 

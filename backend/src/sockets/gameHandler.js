@@ -473,7 +473,11 @@ function initGameHandler(io) {
 
         const persistedRoom = await db('game_rooms').where({ id: roomId }).first()
         if (!persistedRoom) return socket.emit('error', { message: 'Room not found' })
-        socket.join(roomId)
+        await socket.join(roomId)
+
+        const currentPlayerCount = await getPlayerCount(roomId)
+        socket.emit('players_updated', { count: currentPlayerCount })
+        io.to(roomId).emit('players_updated', { count: currentPlayerCount })
 
         const participant = await db('room_participants')
           .where({ room_id: roomId, user_id: user.id })
