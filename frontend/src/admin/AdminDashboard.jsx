@@ -16,6 +16,9 @@ export default function AdminDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [selectedMetric, setSelectedMetric] = useState(null);
+  const [broadcastMsg, setBroadcastMsg] = useState('');
+  const [broadcastBonus, setBroadcastBonus] = useState(0);
+  const [broadcasting, setBroadcasting] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -42,6 +45,38 @@ export default function AdminDashboard() {
     };
     fetchStats();
   }, []);
+
+  const handleBroadcast = async () => {
+    const bonusAmount = Number(broadcastBonus);
+    if (!broadcastMsg.trim() && (!Number.isFinite(bonusAmount) || bonusAmount <= 0)) {
+      alert('Enter a message or a positive bonus amount.');
+      return;
+    }
+    if (!Number.isFinite(bonusAmount) || bonusAmount < 0) {
+      alert('Bonus amount must be a non-negative number.');
+      return;
+    }
+    if (!window.confirm('Are you sure you want to send this to all users?')) return;
+
+    setBroadcasting(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetchApi('/admin/broadcast', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ message: broadcastMsg, bonusAmount }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Broadcast failed.');
+      alert(`Sent successfully to ${data.successCount} users. Failed: ${data.failCount}`);
+      setBroadcastMsg('');
+      setBroadcastBonus(0);
+    } catch (err) {
+      alert(`Broadcast failed: ${err.message}`);
+    } finally {
+      setBroadcasting(false);
+    }
+  };
 
   if (loading) return <div className="text-white p-6">{t('dashboardLoading')}</div>;
 
@@ -76,6 +111,38 @@ export default function AdminDashboard() {
           </button>
         ))}
       </div>
+
+      <section className="bg-slate-800 p-6 rounded-2xl mt-6 border border-slate-700">
+        <h2 className="text-xl font-bold text-white mb-4">Broadcast Announcement</h2>
+        <textarea
+          placeholder="Type your announcement here..."
+          aria-label="Broadcast message"
+          className="w-full bg-slate-900 text-white p-3 rounded-lg mb-3"
+          rows={4}
+          value={broadcastMsg}
+          onChange={(event) => setBroadcastMsg(event.target.value)}
+        />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="number"
+            min="0"
+            step="any"
+            placeholder="Optional bonus amount (ETB)"
+            aria-label="Optional bonus amount in ETB"
+            className="bg-slate-900 text-white p-3 rounded-lg w-full sm:w-1/2"
+            value={broadcastBonus}
+            onChange={(event) => setBroadcastBonus(event.target.value)}
+          />
+          <button
+            type="button"
+            onClick={handleBroadcast}
+            disabled={broadcasting}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-3 rounded-lg w-full sm:w-1/2 disabled:opacity-50"
+          >
+            {broadcasting ? 'Sending...' : 'Send to All Users'}
+          </button>
+        </div>
+      </section>
 
       {selectedMetric && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">

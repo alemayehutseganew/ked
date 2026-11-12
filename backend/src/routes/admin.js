@@ -6,6 +6,7 @@ const crypto = require('crypto')
 const bcrypt = require('bcryptjs')
 const { adminAuth, JWT_SECRET } = require('../middleware/adminAuth')
 const { archiveOldData } = require('../../scripts/archive_old_data')
+const { bot } = require('../bot/index')
 
 function verifyPassword(password, stored) {
   if (/^\$2[aby]\$/.test(stored)) {
@@ -116,6 +117,66 @@ router.get('/stats', adminAuth, async (req, res) => {
   } catch (err) {
     console.error('[Admin] Stats error:', err.message, err)
     res.status(500).json({ error: 'Failed to fetch stats' })
+  }
+})
+
+router.post('/broadcast', adminAuth, async (req, res) => {
+  const message = typeof req.body?.message === 'string' ? req.body.message.trim() : ''
+  const bonusAmount = Number(req.body?.bonusAmount ?? 0)
+  if (req.body?.message != null && typeof req.body.message !== 'string') {
+    return res.status(400).json({ error: 'Message must be a string.' })
+  }
+  if (!Number.isFinite(bonusAmount) || bonusAmount < 0) {
+    return res.status(400).json({ error: 'Bonus amount must be a non-negative number.' })
+  }
+  if (!message && bonusAmount <= 0) {
+    return res.status(400).json({ error: 'Provide a message or a bonus amount.' })
+  }
+
+  try {
+    let users
+    if (bonusAmount > 0) {
+      users = await db.transaction(async (trx) => {
+        const recipients = await trx('users').select('id', 'telegram_id')
+        if (recipients.length) {
+          await trx('users')
+            .whereIn('id', recipients.map((user) => user.id))
+            .increment('wallet_balance', bonusAmount)
+          await trx('financial_ledger').insert(recipients.map((user) => ({
+            user_id: user.id,
+            amount: bonusAmount,
+            type: 'ADMIN_BONUS',
+            reference: 'Admin broadcast bonus',
+            created_at: new Date(),
+          })))
+        }
+        return recipients
+      })
+    } else {
+      users = await db('users').select('id', 'telegram_id')
+    }
+
+    let successCount = 0
+    let failCount = 0
+    const text = [
+      message,
+      bonusAmount > 0 ? `🎁 You have received a bonus of ${bonusAmount} ETB!` : '',
+    ].filter(Boolean).join('\n\n')
+
+    for (const user of users) {
+      try {
+        await bot.telegram.sendMessage(user.telegram_id, text)
+        successCount++
+      } catch (err) {
+        failCount++
+        console.warn(`[Admin] Broadcast delivery failed for user ${user.id}:`, err.message)
+      }
+    }
+
+    return res.json({ success: true, successCount, failCount, total: users.length })
+  } catch (err) {
+    console.error('[BROADCAST ERROR]', err)
+    return res.status(500).json({ error: 'Failed to process broadcast' })
   }
 })
 
