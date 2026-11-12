@@ -15,6 +15,36 @@ router.get('/', async (req, res) => {
   }
 })
 
+router.get('/waiting-room', userAuth, async (req, res) => {
+  try {
+    const stake = Number(req.query.stake)
+    if (!Number.isFinite(stake) || stake <= 0) {
+      return res.status(400).json({ error: 'A valid stake is required.' })
+    }
+
+    const room = await db('game_rooms')
+      .leftJoin('room_participants', 'game_rooms.id', 'room_participants.room_id')
+      .where({ 'game_rooms.stake_amount': stake, 'game_rooms.status': 'WAITING' })
+      .groupBy('game_rooms.id')
+      .havingRaw('COUNT(room_participants.id) < ?', [MAX_ROOM_PLAYERS])
+      .select(
+        'game_rooms.id',
+        'game_rooms.stake_amount',
+        db.raw('COUNT(room_participants.id) as player_count')
+      )
+      .orderBy('game_rooms.created_at', 'asc')
+      .first()
+
+    return res.json({
+      roomId: room?.id || null,
+      playerCount: Number(room?.player_count || 0),
+    })
+  } catch (err) {
+    console.error('[rooms] Failed to fetch waiting room:', err)
+    return res.status(500).json({ error: 'Failed to fetch waiting room.' })
+  }
+})
+
 // GET /api/rooms/active-cards?stake=X — returns cards reserved in active rooms for this stake
 router.get('/active-cards', async (req, res) => {
   try {
@@ -211,9 +241,16 @@ router.post('/join', userAuth, async (req, res) => {
         .where({ room_id: result.room.id })
         .count('* as count')
         .first()
+      const playerCount = Number(countResult.count)
+      console.log(`[REST] Player joined. Emitting count: ${playerCount}`)
       io.to(String(result.room.id)).emit('players_updated', {
-        count: Number(countResult.count),
+        count: playerCount,
       })
+      if (playerCount >= 2) {
+        io.to(String(result.room.id)).emit('check_auto_start', {
+          roomId: String(result.room.id),
+        })
+      }
     }
 
     console.log('[join] Sending response:', result.room.id)

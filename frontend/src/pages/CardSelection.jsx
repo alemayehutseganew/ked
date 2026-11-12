@@ -25,16 +25,44 @@ export default function CardSelection({
   const { t } = useTranslation();
 
   const [takenCards, setTakenCards] = useState([]);
-  const [livePlayersCount, setLivePlayersCount] = useState(playersCount);
+  const [waitingRoomId, setWaitingRoomId] = useState(null);
+  const [socketPlayersCount, setSocketPlayersCount] = useState(null);
+  const [socketCountdown, setSocketCountdown] = useState(undefined);
   const [selectedCard, setSelectedCard] = useState(cardData?.id ? Number(cardData.id) : null);
   const [selectedMatrix, setSelectedMatrix] = useState(cardData?.matrix || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const activeRoomId = roomId || waitingRoomId;
+  const displayedPlayersCount = socketPlayersCount ?? playersCount;
+  const displayedCountdown = socketCountdown !== undefined ? socketCountdown : countdown;
   const currentSelectedCard = selectedCard ?? (cardData?.id ? Number(cardData.id) : null);
   const currentSelectedMatrix = selectedCard === null ? cardData?.matrix || null : selectedMatrix;
   const selectionLocked = isGameStarted
-    || (countdown !== null && countdown !== undefined && countdown <= 0);
-  const hasCountdown = countdown !== null && countdown !== undefined;
+    || (displayedCountdown !== null && displayedCountdown !== undefined && displayedCountdown <= 0);
+  const hasCountdown = displayedCountdown !== null && displayedCountdown !== undefined;
+
+  useEffect(() => {
+    if (roomId) return undefined;
+
+    let active = true;
+    const fetchWaitingRoom = async () => {
+      try {
+        const res = await fetchApi(`/rooms/waiting-room?stake=${encodeURIComponent(stake)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to fetch waiting room.');
+        if (!active) return;
+        setWaitingRoomId(data.roomId || null);
+        setSocketPlayersCount(Number(data.playerCount) || 0);
+      } catch (err) {
+        console.error('Failed to fetch waiting room', err);
+      }
+    };
+
+    fetchWaitingRoom();
+    return () => {
+      active = false;
+    };
+  }, [roomId, stake]);
 
   useEffect(() => {
     const fetchTakenCards = async () => {
@@ -55,21 +83,40 @@ export default function CardSelection({
     const socket = SocketService.connect();
     const handlePlayersUpdated = (data) => {
       const count = Number(data?.count);
-      if (Number.isFinite(count)) setLivePlayersCount(count);
+      if (Number.isFinite(count)) setSocketPlayersCount(count);
     };
-    const joinRoom = () => socket.emit('join_room', { roomId, stake: Number(stake) });
+    const handleCountdown = (data) => setSocketCountdown(data?.timeLeft ?? null);
+    const handleGameStarted = () => {
+      if (!onCardUpdated && activeRoomId) {
+        navigate(`/game?roomId=${encodeURIComponent(activeRoomId)}&stake=${encodeURIComponent(stake)}`);
+      }
+    };
+    const handleCheckAutoStart = () => {
+      if (activeRoomId) socket.emit('check_auto_start', { roomId: activeRoomId });
+    };
+    const joinRoom = () => {
+      if (activeRoomId) {
+        socket.emit('join_room', { roomId: activeRoomId, stake: Number(stake) });
+      }
+    };
 
     socket.on('players_updated', handlePlayersUpdated);
-    if (roomId && !onCardUpdated) {
+    socket.on('countdown_tick', handleCountdown);
+    socket.on('game_started', handleGameStarted);
+    socket.on('check_auto_start', handleCheckAutoStart);
+    if (activeRoomId && !onCardUpdated) {
       if (socket.connected) joinRoom();
       else socket.on('connect', joinRoom);
     }
 
     return () => {
       socket.off('players_updated', handlePlayersUpdated);
+      socket.off('countdown_tick', handleCountdown);
+      socket.off('game_started', handleGameStarted);
+      socket.off('check_auto_start', handleCheckAutoStart);
       socket.off('connect', joinRoom);
     };
-  }, [onCardUpdated, roomId, stake]);
+  }, [activeRoomId, navigate, onCardUpdated, stake]);
 
   useEffect(() => {
     if (!roomId || onCardUpdated) return undefined;
@@ -308,7 +355,7 @@ export default function CardSelection({
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col items-center justify-center rounded-xl bg-blue-900/50 p-2 text-center">
-            {playersCount < 2 ? (
+            {displayedPlayersCount < 2 ? (
               <span className="animate-pulse text-xs font-semibold leading-tight text-blue-100 sm:text-sm">
                 {t('waitingPlayers')}
               </span>
@@ -318,7 +365,7 @@ export default function CardSelection({
                   {t('countdown')}
                 </span>
                 <span className="mt-1 text-2xl font-black tabular-nums sm:text-4xl">
-                  {formatTime(Math.max(0, Number(countdown)))}
+                  {formatTime(Math.max(0, Number(displayedCountdown)))}
                 </span>
               </>
             ) : (
