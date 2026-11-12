@@ -494,16 +494,47 @@ const GameScreen = () => {
       )}
 
       {gameResult && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className={`bg-[#112A46] rounded-2xl p-8 max-w-sm w-full text-center border-4 ${gameResult.type === 'win' ? 'border-yellow-500' : 'border-red-500'}`}>
-            <h2 className={`text-4xl font-bold mb-4 ${gameResult.type === 'win' ? 'text-yellow-400' : 'text-red-400'}`}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md transition-opacity">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="game-result-title"
+            className="mx-4 w-full max-w-sm scale-100 rounded-3xl border border-slate-600/50 bg-slate-800/90 p-8 text-center shadow-[0_0_50px_rgba(0,0,0,0.8)] transition-all duration-300"
+          >
+            <div className="mb-4 flex justify-center">
+              <div className={`flex h-20 w-20 items-center justify-center rounded-full text-4xl ${gameResult.type === 'win' ? 'animate-bounce bg-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.6)]' : 'bg-slate-700 text-slate-200 shadow-inner'}`}>
+                {gameResult.type === 'win' ? '🏆' : '🎲'}
+              </div>
+            </div>
+            <h2 id="game-result-title" className={`mb-2 text-3xl font-black ${gameResult.type === 'win' ? 'bg-gradient-to-r from-yellow-300 to-yellow-500 bg-clip-text text-transparent' : 'text-slate-200'}`}>
               {t(gameResult.titleKey)}
             </h2>
-            <p className="text-white text-xl mb-8">{t(gameResult.messageKey, {
+            <p className="mb-6 text-sm text-slate-300">{t(gameResult.messageKey, {
               ...gameResult.messageValues,
               name: gameResult.messageValues?.name || t('player'),
             })}</p>
-            <button onClick={() => { setGameResult(null); navigate('/'); }} className="w-full bg-white text-[#112A46] font-bold py-3 rounded-xl">{t('backToLobby')}</button>
+            <div className="flex flex-col gap-3">
+              {gameResult.type === 'win' && (
+                <div className="mb-1 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+                  <span className="text-sm font-bold text-emerald-400">{t('resultPrize')}</span>
+                  <span className="text-lg font-black text-emerald-300">+ ETB {gameResult.messageValues?.amount}</span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => { setGameResult(null); navigate(`/select-card?stake=${stake}`); }}
+                className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 py-3.5 font-bold text-white shadow-[0_5px_0_#1e3a8a] transition-all active:translate-y-1 active:shadow-none"
+              >
+                {t('playAgain')}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setGameResult(null); navigate('/'); }}
+                className="w-full rounded-xl py-2 font-bold text-slate-400 transition-colors hover:text-white"
+              >
+                {t('backToLobby')}
+              </button>
+            </div>
           </div>
         </div>
       )}
