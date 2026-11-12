@@ -119,9 +119,18 @@ export default function CardSelection({
     };
     const handleCountdown = (data) => setSocketCountdown(data?.timeLeft ?? null);
     const handleGameStarted = () => {
-      if (!onCardUpdated && activeRoomId) {
-        navigate(`/game?roomId=${encodeURIComponent(activeRoomId)}&stake=${encodeURIComponent(stake)}`);
+      const gameRoomId = activeRoomId || roomId;
+      if (!gameRoomId) {
+        console.error('[SOCKET] Received game_started without an active room ID.');
+        return;
       }
+      console.log('[SOCKET] Game started! Redirecting to game screen...');
+      navigate(`/game?roomId=${encodeURIComponent(gameRoomId)}&stake=${encodeURIComponent(stake)}`, { replace: true });
+    };
+    const handleGameAborted = (data) => {
+      console.log('[SOCKET] Game aborted:', data?.message);
+      setSocketCountdown(null);
+      showToast(data?.message || 'Game cancelled.');
     };
     const handleCheckAutoStart = () => {
       if (activeRoomId) socket.emit('check_auto_start', { roomId: activeRoomId });
@@ -135,6 +144,7 @@ export default function CardSelection({
     socket.on('players_updated', handlePlayersUpdated);
     socket.on('countdown_tick', handleCountdown);
     socket.on('game_started', handleGameStarted);
+    socket.on('game_aborted', handleGameAborted);
     socket.on('check_auto_start', handleCheckAutoStart);
     if (activeRoomId && !onCardUpdated) {
       if (socket.connected) joinRoom();
@@ -145,10 +155,11 @@ export default function CardSelection({
       socket.off('players_updated', handlePlayersUpdated);
       socket.off('countdown_tick', handleCountdown);
       socket.off('game_started', handleGameStarted);
+      socket.off('game_aborted', handleGameAborted);
       socket.off('check_auto_start', handleCheckAutoStart);
       socket.off('connect', joinRoom);
     };
-  }, [activeRoomId, navigate, onCardUpdated, stake]);
+  }, [activeRoomId, navigate, onCardUpdated, roomId, stake]);
 
   useEffect(() => {
     if (!roomId || onCardUpdated) return undefined;
@@ -165,12 +176,10 @@ export default function CardSelection({
       }
     };
 
-    socket.on('game_started', redirectToGame);
     socket.on('game_in_progress', redirectToGame);
     socket.on('room_update', handleRoomUpdate);
 
     return () => {
-      socket.off('game_started', redirectToGame);
       socket.off('game_in_progress', redirectToGame);
       socket.off('room_update', handleRoomUpdate);
     };
