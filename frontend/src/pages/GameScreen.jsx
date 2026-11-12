@@ -428,7 +428,7 @@ const GameScreen = () => {
             )}
           </div>
 
-          <div className="grid flex-1 grid-cols-1 items-start gap-3 sm:grid-cols-2">
+          <div className="grid flex-1 grid-cols-2 items-start gap-2">
             <div className="flex min-w-0 flex-col gap-2">
               <div className="flex min-h-11 flex-wrap justify-center gap-2">
                 {calledHistory.map((ball, i) => (
@@ -471,7 +471,7 @@ const GameScreen = () => {
                       const isFree = index === 12 || num === 'FREE';
                       const isMarked = isFree || markedNumbers.includes(num);
                       return (
-                        <button key={index} onClick={() => !isFree && handleDaub(num)} className={`flex aspect-square min-h-11 min-w-11 items-center justify-center rounded-lg border text-xs font-bold transition-all duration-150 sm:text-sm ${isMarked ? 'scale-[0.98] border-slate-700 bg-slate-900 text-emerald-300 shadow-[inset_0_4px_8px_rgba(0,0,0,0.9)]' : 'border-slate-300 bg-slate-100 text-slate-900 shadow-[0_3px_0_rgb(148,163,184)] active:translate-y-0.5 active:shadow-none'}`}>
+                        <button key={index} onClick={() => !isFree && handleDaub(num)} className={`flex aspect-square min-h-0 min-w-0 items-center justify-center rounded-lg border text-[10px] font-bold transition-all duration-150 sm:text-sm ${isMarked ? 'scale-[0.98] border-slate-700 bg-slate-900 text-emerald-300 shadow-[inset_0_4px_8px_rgba(0,0,0,0.9)]' : 'border-slate-300 bg-slate-100 text-slate-900 shadow-[0_3px_0_rgb(148,163,184)] active:translate-y-0.5 active:shadow-none'}`}>
                           {isFree ? 'F' : num}
                         </button>
                       );
