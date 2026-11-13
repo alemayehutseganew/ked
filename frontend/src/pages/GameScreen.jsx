@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import CardSelection from './CardSelection';
 import SocketService from '../services/socket';
-import { getMuteState, playBallCall, toggleMute, unlockAudio } from '../utils/bingoSounds';
+import { playNumberAudio, toggleVoice, unlockAudio } from '../utils/bingoSounds';
 import { useWallet } from '../WalletContext';
 
 const formatTime = (seconds) => {
@@ -60,22 +60,28 @@ const GameScreen = () => {
   const [spectatorBall, setSpectatorBall] = useState(null);
   const [bingoMessage, setBingoMessage] = useState(null);
   const [gameResult, setGameResult] = useState(null);
-  const [isMuted, setIsMuted] = useState(getMuteState());
+  const [isVoiceOn, setIsVoiceOn] = useState(false);
 
   useEffect(() => {
-    const handleFirstInteraction = () => {
+    const handleFirstTap = () => {
       unlockAudio();
-      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstTap);
+      document.removeEventListener('click', handleFirstTap);
     };
 
-    document.addEventListener('click', handleFirstInteraction);
-    return () => document.removeEventListener('click', handleFirstInteraction);
+    document.addEventListener('touchstart', handleFirstTap, { once: true });
+    document.addEventListener('click', handleFirstTap, { once: true });
+    return () => {
+      document.removeEventListener('touchstart', handleFirstTap);
+      document.removeEventListener('click', handleFirstTap);
+    };
   }, []);
 
-  const handleSoundToggle = () => {
-    const nextMuted = toggleMute();
-    setIsMuted(nextMuted);
-    if (!nextMuted) unlockAudio();
+  const handleVoiceToggle = () => {
+    const nextVoiceOn = !isVoiceOn;
+    setIsVoiceOn(nextVoiceOn);
+    toggleVoice(nextVoiceOn);
+    if (nextVoiceOn) unlockAudio();
   };
 
   useEffect(() => {
@@ -127,12 +133,12 @@ const GameScreen = () => {
     });
     socket.on('new_number_called', (data) => {
       const ball = data.ball || `${data.letter}-${data.number}`;
-      playBallCall(ball);
       const [ballLetter, ballNumber] = ball.split('-');
       const number = Number(data.number ?? ballNumber);
       const letter = data.letter || ballLetter;
       if (!Number.isFinite(number) || !letter) return;
 
+      playNumberAudio(letter, number);
       setCurrentBall({ number, letter });
       setCalledNumbers(data.calledNumbers || (prev => (
         prev.includes(number) ? prev : [...prev, number]
@@ -291,11 +297,11 @@ const GameScreen = () => {
               </button>
               <button
                 type="button"
-                aria-label={isMuted ? t('unmuteSound') : t('muteSound')}
-                onClick={handleSoundToggle}
+                aria-label={isVoiceOn ? t('muteSound') : t('unmuteSound')}
+                onClick={handleVoiceToggle}
                 className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-700 text-white shadow-[0_4px_0_rgb(51,65,85)] transition-all active:translate-y-1 active:shadow-none"
               >
-                {isMuted ? '\u{1F507}' : '\u{1F50A}'}
+                {isVoiceOn ? '\u{1F50A}' : '\u{1F507}'}
               </button>
             </div>
           </div>
@@ -416,11 +422,11 @@ const GameScreen = () => {
           </button>
           <button
             type="button"
-            aria-label={isMuted ? t('unmuteSound') : t('muteSound')}
-            onClick={handleSoundToggle}
+            aria-label={isVoiceOn ? t('muteSound') : t('unmuteSound')}
+            onClick={handleVoiceToggle}
             className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-700 text-white shadow-[0_4px_0_rgb(51,65,85)] transition-all active:translate-y-1 active:shadow-none"
           >
-            {isMuted ? '\u{1F507}' : '\u{1F50A}'}
+            {isVoiceOn ? '\u{1F50A}' : '\u{1F507}'}
           </button>
         </div>
       </div>
