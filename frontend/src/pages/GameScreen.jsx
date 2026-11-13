@@ -60,7 +60,7 @@ const GameScreen = () => {
   const [spectatorBall, setSpectatorBall] = useState(null);
   const [bingoMessage, setBingoMessage] = useState(null);
   const [gameResult, setGameResult] = useState(null);
-  const [isVoiceOn, setIsVoiceOn] = useState(false);
+  const [isVoiceOn, setIsVoiceOn] = useState(true);
 
   useEffect(() => {
     const handleFirstTap = async () => {

@@ -6,7 +6,7 @@ const bingoRanges = {
   O: [61, 75],
 };
 
-let isVoiceEnabled = false;
+let isVoiceEnabled = true;
 let isAudioUnlocked = false;
 let audioUnlockPromise = null;
 const audioCache = Object.create(null);
@@ -17,19 +17,6 @@ const attemptAudioUnlock = async () => {
     const silentAudio = new Audio(SILENT_AUDIO);
     silentAudio.volume = 0;
     const playback = silentAudio.play();
-
-    if (
-      typeof window !== 'undefined' &&
-      window.speechSynthesis &&
-      typeof window.SpeechSynthesisUtterance === 'function'
-    ) {
-      try {
-        window.speechSynthesis.speak(new window.SpeechSynthesisUtterance(''));
-      } catch (error) {
-        console.warn('[Audio] Speech synthesis unlock failed:', error);
-      }
-    }
-
     await playback;
     silentAudio.pause();
     isAudioUnlocked = true;
@@ -78,21 +65,41 @@ export const playNumberAudio = (letter, number) => {
     numericNumber > numberRange[1]
   ) return;
 
-  const fileName = `${normalizedLetter}${numericNumber}.mp3`;
+  const fileBaseName = `${normalizedLetter}${numericNumber}`;
+  const fileName = `${fileBaseName}.mp3`;
   if (!audioCache[fileName]) {
-    audioCache[fileName] = new Audio(`/audio/${fileName}`);
+    const audio = new Audio(`/audio/${fileName}`);
+    let usingM4aFallback = false;
+    audio.addEventListener('error', () => {
+      if (usingM4aFallback) {
+        console.warn(`[Audio] Failed to load ${fileBaseName}.m4a.`);
+        return;
+      }
+
+      usingM4aFallback = true;
+      const fallbackFileName = `${fileBaseName}.m4a`;
+      audio.src = `/audio/${fallbackFileName}`;
+      audio.load();
+      audio.currentTime = 0;
+      playAudio(audio, fallbackFileName);
+    });
+    audioCache[fileName] = audio;
   }
 
   const audio = audioCache[fileName];
   audio.currentTime = 0;
+  playAudio(audio, fileName);
+};
+
+const playAudio = (audio, fileName) => {
   try {
     const playback = audio.play();
     if (playback && typeof playback.catch === 'function') {
       playback.catch((error) => {
-        console.warn(`[Audio] Failed to play ${fileName}. Ensure the file exists in public/audio/.`, error);
+        console.warn(`[Audio] Failed to play ${fileName}.`, error);
       });
     }
   } catch (error) {
-    console.warn(`[Audio] Failed to play ${fileName}. Ensure the file exists in public/audio/.`, error);
+    console.warn(`[Audio] Failed to play ${fileName}.`, error);
   }
 };
