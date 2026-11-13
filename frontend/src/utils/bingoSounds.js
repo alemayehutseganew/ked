@@ -10,20 +10,19 @@ let isVoiceEnabled = true;
 let isAudioUnlocked = false;
 let audioUnlockPromise = null;
 const audioCache = Object.create(null);
-const SILENT_AUDIO = 'data:audio/wav;base64,UklGRqQCAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YYACAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA=';
 
 const attemptAudioUnlock = async () => {
   try {
-    const silentAudio = new Audio(SILENT_AUDIO);
-    silentAudio.volume = 0;
-    const playback = silentAudio.play();
-    await playback;
-    silentAudio.pause();
+    const unlockAudioObj = new Audio('/audio/B1.m4a');
+    unlockAudioObj.volume = 0;
+    await unlockAudioObj.play();
+    unlockAudioObj.pause();
+    unlockAudioObj.currentTime = 0;
     isAudioUnlocked = true;
-    console.log('[Audio] Unlocked via silent audio.');
+    console.log('[Audio] Mobile audio context unlocked successfully.');
     return true;
   } catch (error) {
-    console.log('[Audio] Unlock failed:', error);
+    console.warn('[Audio] Unlock failed. The user might need to interact again.', error);
     return false;
   }
 };
@@ -65,34 +64,15 @@ export const playNumberAudio = (letter, number) => {
     numericNumber > numberRange[1]
   ) return;
 
-  const fileBaseName = `${normalizedLetter}${numericNumber}`;
-  const fileName = `${fileBaseName}.mp3`;
-  if (!audioCache[fileName]) {
-    const audio = new Audio(`/audio/${fileName}`);
-    let usingM4aFallback = false;
-    audio.addEventListener('error', () => {
-      if (usingM4aFallback) {
-        console.warn(`[Audio] Failed to load ${fileBaseName}.m4a.`);
-        return;
-      }
-
-      usingM4aFallback = true;
-      const fallbackFileName = `${fileBaseName}.m4a`;
-      audio.src = `/audio/${fallbackFileName}`;
-      audio.load();
-      audio.currentTime = 0;
-      playAudio(audio, fallbackFileName);
-    });
-    audioCache[fileName] = audio;
-  }
-
-  const audio = audioCache[fileName];
-  audio.currentTime = 0;
-  playAudio(audio, fileName);
-};
-
-const playAudio = (audio, fileName) => {
+  const fileName = `${normalizedLetter}${numericNumber}.m4a`;
   try {
+    if (!audioCache[fileName]) {
+      audioCache[fileName] = new Audio(`/audio/${fileName}`);
+      audioCache[fileName].preload = 'auto';
+    }
+
+    const audio = audioCache[fileName];
+    audio.currentTime = 0;
     const playback = audio.play();
     if (playback && typeof playback.catch === 'function') {
       playback.catch((error) => {
@@ -100,6 +80,6 @@ const playAudio = (audio, fileName) => {
       });
     }
   } catch (error) {
-    console.warn(`[Audio] Failed to play ${fileName}.`, error);
+    console.error('[Audio] Playback error:', error);
   }
 };
