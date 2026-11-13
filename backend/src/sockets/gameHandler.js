@@ -507,7 +507,7 @@ async function startCountdown(io, roomId) {
             room.intervalId = null
             scheduleNoWinner(io, roomId, room)
           }
-        }, 3000)
+        }, 4000)
         room.intervalId = room.timers.draw
       } catch (err) {
         console.error('[Game] Error during countdown end:', err)

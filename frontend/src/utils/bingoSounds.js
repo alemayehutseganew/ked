@@ -51,6 +51,22 @@ export const toggleVoice = (enabled) => {
   }
 };
 
+export const preloadAudio = () => {
+  if (typeof Audio === 'undefined') return;
+
+  Object.entries(bingoRanges).forEach(([letter, [start, end]]) => {
+    for (let number = start; number <= end; number += 1) {
+      const fileName = `${letter}${number}.m4a`;
+      if (!audioCache[fileName]) {
+        const audio = new Audio(`/audio/${fileName}`);
+        audio.preload = 'auto';
+        audioCache[fileName] = audio;
+      }
+    }
+  });
+  console.log('[Audio] All 75 audio files preloaded into cache.');
+};
+
 export const playNumberAudio = (letter, number) => {
   if (!isVoiceEnabled || !isAudioUnlocked || typeof Audio === 'undefined') return;
 
@@ -66,6 +82,13 @@ export const playNumberAudio = (letter, number) => {
 
   const fileName = `${normalizedLetter}${numericNumber}.m4a`;
   try {
+    Object.values(audioCache).forEach((audio) => {
+      if (!audio.paused) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    });
+
     if (!audioCache[fileName]) {
       audioCache[fileName] = new Audio(`/audio/${fileName}`);
       audioCache[fileName].preload = 'auto';
@@ -83,3 +106,5 @@ export const playNumberAudio = (letter, number) => {
     console.error('[Audio] Playback error:', error);
   }
 };
+
+preloadAudio();
