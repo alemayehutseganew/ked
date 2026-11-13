@@ -8,43 +8,50 @@ const bingoRanges = {
 
 let isVoiceEnabled = false;
 let isAudioUnlocked = false;
-let isAudioUnlockPending = false;
-const audioCache = {};
+let audioUnlockPromise = null;
+const audioCache = Object.create(null);
+const SILENT_AUDIO = 'data:audio/wav;base64,UklGRqQCAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YYACAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA=';
 
-export const unlockAudio = () => {
-  if (
-    isAudioUnlocked ||
-    isAudioUnlockPending ||
-    typeof Audio === 'undefined'
-  ) return;
-
-  const silentAudio = new Audio('/audio/B1.mp3');
-  silentAudio.volume = 0;
-  isAudioUnlockPending = true;
-
+const attemptAudioUnlock = async () => {
   try {
+    const silentAudio = new Audio(SILENT_AUDIO);
+    silentAudio.volume = 0;
     const playback = silentAudio.play();
-    if (playback && typeof playback.then === 'function') {
-      playback.then(() => {
-        silentAudio.pause();
-        silentAudio.currentTime = 0;
-        isAudioUnlocked = true;
-        isAudioUnlockPending = false;
-        console.log('[Audio] HTML5 Audio unlocked.');
-      }).catch((error) => {
-        isAudioUnlockPending = false;
-        console.log('[Audio] Unlock failed:', error);
-      });
-    } else {
-      silentAudio.pause();
-      silentAudio.currentTime = 0;
-      isAudioUnlocked = true;
-      isAudioUnlockPending = false;
-      console.log('[Audio] HTML5 Audio unlocked.');
+
+    if (
+      typeof window !== 'undefined' &&
+      window.speechSynthesis &&
+      typeof window.SpeechSynthesisUtterance === 'function'
+    ) {
+      try {
+        window.speechSynthesis.speak(new window.SpeechSynthesisUtterance(''));
+      } catch (error) {
+        console.warn('[Audio] Speech synthesis unlock failed:', error);
+      }
     }
+
+    await playback;
+    silentAudio.pause();
+    isAudioUnlocked = true;
+    console.log('[Audio] Unlocked via silent audio.');
+    return true;
   } catch (error) {
-    isAudioUnlockPending = false;
     console.log('[Audio] Unlock failed:', error);
+    return false;
+  }
+};
+
+export const unlockAudio = async () => {
+  if (isAudioUnlocked) return true;
+  if (audioUnlockPromise) return audioUnlockPromise;
+  if (typeof Audio === 'undefined') return false;
+
+  const attempt = attemptAudioUnlock();
+  audioUnlockPromise = attempt;
+  try {
+    return await attempt;
+  } finally {
+    audioUnlockPromise = null;
   }
 };
 
@@ -59,7 +66,7 @@ export const toggleVoice = (enabled) => {
 };
 
 export const playNumberAudio = (letter, number) => {
-  if (!isVoiceEnabled || typeof Audio === 'undefined') return;
+  if (!isVoiceEnabled || !isAudioUnlocked || typeof Audio === 'undefined') return;
 
   const normalizedLetter = String(letter).toUpperCase();
   const numericNumber = Number(number);

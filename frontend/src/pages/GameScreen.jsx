@@ -63,14 +63,16 @@ const GameScreen = () => {
   const [isVoiceOn, setIsVoiceOn] = useState(false);
 
   useEffect(() => {
-    const handleFirstTap = () => {
-      unlockAudio();
+    const handleFirstTap = async () => {
+      const unlocked = await unlockAudio();
+      if (!unlocked) return;
+
       document.removeEventListener('touchstart', handleFirstTap);
       document.removeEventListener('click', handleFirstTap);
     };
 
-    document.addEventListener('touchstart', handleFirstTap, { once: true });
-    document.addEventListener('click', handleFirstTap, { once: true });
+    document.addEventListener('touchstart', handleFirstTap, { passive: true });
+    document.addEventListener('click', handleFirstTap);
     return () => {
       document.removeEventListener('touchstart', handleFirstTap);
       document.removeEventListener('click', handleFirstTap);
