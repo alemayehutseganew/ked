@@ -1,4 +1,5 @@
 const letters = { B: 'ቢ', I: 'አይ', N: 'ኤን', G: 'ጂ', O: 'ኦ' };
+const FALLBACK_TO_ENGLISH = true;
 
 function getAmharicNumber(num) {
   const ones = ['', 'አንድ', 'ሁለት', 'ሶስት', 'አራት', 'አምስት', 'ስድስት', 'ሰባት', 'ስምንት', 'ዘጠኝ'];
@@ -13,13 +14,15 @@ function getAmharicNumber(num) {
 let isMuted = false;
 let voicesLoaded = false;
 let amharicVoice = null;
+let englishVoice = null;
 
 const loadVoices = () => {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   const voices = window.speechSynthesis.getVoices();
   if (voices.length > 0) {
     voicesLoaded = true;
-    amharicVoice = voices.find((voice) => /am/i.test(voice.lang)) || voices[0];
+    amharicVoice = voices.find((voice) => /^am(?:-|$)/i.test(voice.lang)) || null;
+    englishVoice = voices.find((voice) => /^en(?:-|$)/i.test(voice.lang)) || null;
   }
 };
 
@@ -41,27 +44,47 @@ export const toggleMute = () => {
 export const getMuteState = () => isMuted;
 
 export const playBallCall = (ballString) => {
-  if (isMuted || typeof window === 'undefined' || !window.speechSynthesis) return;
+  if (
+    isMuted ||
+    typeof window === 'undefined' ||
+    !window.speechSynthesis ||
+    typeof window.SpeechSynthesisUtterance !== 'function'
+  ) return;
 
   const [letter, numberString] = ballString.split('-');
   const number = Number.parseInt(numberString, 10);
   if (!letters[letter] || !Number.isInteger(number) || number < 1 || number > 75) return;
 
-  const textToSpeak = `${letters[letter]} ${getAmharicNumber(number)}`;
   window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(textToSpeak);
-  utterance.rate = 0.9;
-
   if (!voicesLoaded) loadVoices();
-  if (amharicVoice) utterance.voice = amharicVoice;
+
+  const useAmharicVoice = Boolean(amharicVoice);
+  if (!useAmharicVoice && !FALLBACK_TO_ENGLISH) return;
+
+  const textToSpeak = useAmharicVoice
+    ? `${letters[letter]} ${getAmharicNumber(number)}`
+    : `${letter} ${number}`;
+  const utterance = new window.SpeechSynthesisUtterance(textToSpeak);
+  utterance.rate = 0.9;
+  if (useAmharicVoice) {
+    utterance.lang = 'am-ET';
+    utterance.voice = amharicVoice;
+  } else {
+    utterance.lang = 'en-US';
+    if (englishVoice) utterance.voice = englishVoice;
+  }
 
   window.speechSynthesis.speak(utterance);
 };
 
 export const unlockAudio = () => {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  if (
+    typeof window === 'undefined' ||
+    !window.speechSynthesis ||
+    typeof window.SpeechSynthesisUtterance !== 'function'
+  ) return;
 
-  const utterance = new SpeechSynthesisUtterance(' ');
+  const utterance = new window.SpeechSynthesisUtterance('');
   utterance.volume = 0;
   window.speechSynthesis.speak(utterance);
 };

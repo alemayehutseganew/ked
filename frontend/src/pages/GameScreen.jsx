@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import CardSelection from './CardSelection';
 import SocketService from '../services/socket';
-import { getMuteState, playBallCall, toggleMute } from '../utils/bingoSounds';
+import { getMuteState, playBallCall, toggleMute, unlockAudio } from '../utils/bingoSounds';
 import { useWallet } from '../WalletContext';
 
 const formatTime = (seconds) => {
@@ -61,6 +61,22 @@ const GameScreen = () => {
   const [bingoMessage, setBingoMessage] = useState(null);
   const [gameResult, setGameResult] = useState(null);
   const [isMuted, setIsMuted] = useState(getMuteState());
+
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      unlockAudio();
+      document.removeEventListener('click', handleFirstInteraction);
+    };
+
+    document.addEventListener('click', handleFirstInteraction);
+    return () => document.removeEventListener('click', handleFirstInteraction);
+  }, []);
+
+  const handleSoundToggle = () => {
+    const nextMuted = toggleMute();
+    setIsMuted(nextMuted);
+    if (!nextMuted) unlockAudio();
+  };
 
   useEffect(() => {
     if (!userId) return;
@@ -276,7 +292,7 @@ const GameScreen = () => {
               <button
                 type="button"
                 aria-label={isMuted ? t('unmuteSound') : t('muteSound')}
-                onClick={() => setIsMuted(toggleMute())}
+                onClick={handleSoundToggle}
                 className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-700 text-white shadow-[0_4px_0_rgb(51,65,85)] transition-all active:translate-y-1 active:shadow-none"
               >
                 {isMuted ? '\u{1F507}' : '\u{1F50A}'}
@@ -387,14 +403,21 @@ const GameScreen = () => {
             <span className="text-slate-400">{t('players')}:</span><span className="text-purple-300">{playersCount}</span>
           </div>
         </div>
-        <div className="ml-auto flex gap-2 text-xs">
+        <div className="ml-auto flex items-center gap-2 text-xs">
+          <div className="flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900/80 px-3 shadow-inner">
+            <span className="text-sm text-yellow-400" aria-hidden="true">💰</span>
+            <span className="whitespace-nowrap text-sm font-black tabular-nums text-white sm:text-base">
+              {Number.isFinite(Number(balance)) ? Number(balance).toFixed(2) : '0.00'}
+              <span className="ml-1 text-[10px] font-bold text-slate-400">ETB</span>
+            </span>
+          </div>
           <button onClick={() => i18n.changeLanguage(i18n.language === 'en' ? 'am' : 'en')} className="flex h-11 min-w-11 items-center justify-center rounded-full bg-slate-700 px-3 font-bold text-white shadow-[0_4px_0_rgb(51,65,85)] transition-all active:translate-y-1 active:shadow-none">
             {i18n.language === 'en' ? 'AM' : 'EN'}
           </button>
           <button
             type="button"
             aria-label={isMuted ? t('unmuteSound') : t('muteSound')}
-            onClick={() => setIsMuted(toggleMute())}
+            onClick={handleSoundToggle}
             className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-700 text-white shadow-[0_4px_0_rgb(51,65,85)] transition-all active:translate-y-1 active:shadow-none"
           >
             {isMuted ? '\u{1F507}' : '\u{1F50A}'}
