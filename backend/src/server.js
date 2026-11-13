@@ -157,6 +157,63 @@ function setupRealtime() {
 }
 
 // 12. Heavy Services Initialization (Runs after server starts listening)
+async function performStartupCleanup() {
+  console.log('[Cleanup] Running startup recovery sweep...')
+  try {
+    const db = require('./db')
+    const stuckRooms = await db('game_rooms')
+      .whereIn('status', ['COUNTDOWN', 'PLAYING', 'CLAIMING'])
+      .orWhere(function () {
+        this.where('status', 'WAITING')
+          .andWhere('created_at', '<', db.raw("NOW() - INTERVAL '2 hours'"))
+      })
+
+    if (stuckRooms.length === 0) {
+      console.log('[Cleanup] No stuck rooms found. System is clean.')
+      return
+    }
+
+    console.log(`[Cleanup] Found ${stuckRooms.length} stuck rooms. Purging...`)
+    const roomIds = stuckRooms.map((room) => room.id)
+    await db.transaction(async (trx) => {
+      await trx('room_card_selections').whereIn('room_id', roomIds).del()
+      await trx('room_participants').whereIn('room_id', roomIds).del()
+      await trx('game_rooms').whereIn('id', roomIds).update({
+        status: 'WAITING',
+        called_numbers: JSON.stringify([]),
+        winning_pattern: null,
+      })
+    })
+    console.log('[Cleanup] Startup sweep complete. Stuck rooms purged.')
+  } catch (err) {
+    console.error('[Cleanup] Startup sweep failed:', err)
+  }
+}
+
+function startPeriodicCleanup() {
+  setInterval(async () => {
+    try {
+      const db = require('./db')
+      console.log('[Cron] Running periodic zombie room cleanup...')
+      const staleRooms = await db('game_rooms')
+        .whereIn('status', ['WAITING', 'COUNTDOWN'])
+        .where('created_at', '<', db.raw("NOW() - INTERVAL '30 minutes'"))
+
+      if (staleRooms.length === 0) return
+
+      const roomIds = staleRooms.map((room) => room.id)
+      await db.transaction(async (trx) => {
+        await trx('room_card_selections').whereIn('room_id', roomIds).del()
+        await trx('room_participants').whereIn('room_id', roomIds).del()
+        await trx('game_rooms').whereIn('id', roomIds).del()
+      })
+      console.log(`[Cron] Purged ${staleRooms.length} abandoned rooms.`)
+    } catch (err) {
+      console.error('[Cron] Periodic cleanup failed:', err)
+    }
+  }, 5 * 60 * 1000)
+}
+
 async function initializeHeavyServices() {
   try {
     const webhookUrl = process.env.WEBHOOK_URL
@@ -170,6 +227,9 @@ async function initializeHeavyServices() {
   } catch (err) {
     console.error('[STARTUP ERROR] Bot initialization failed:', err)
   }
+
+  await performStartupCleanup()
+  startPeriodicCleanup()
 
   try {
     setupRealtime()
