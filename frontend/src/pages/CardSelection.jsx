@@ -52,15 +52,17 @@ export default function CardSelection({
   const [takenCards, setTakenCards] = useState([]);
   const [socketPlayersCount, setSocketPlayersCount] = useState(null);
   const [socketCountdown, setSocketCountdown] = useState(undefined);
-  const [selectedCard, setSelectedCard] = useState(null);
+  const [selectedCard, setSelectedCard] = useState(undefined);
   const [selectedMatrix, setSelectedMatrix] = useState(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'error' });
   const [toastVisible, setToastVisible] = useState(false);
   const displayedPlayersCount = socketPlayersCount ?? playersCount;
   const displayedCountdown = socketCountdown !== undefined ? socketCountdown : countdown;
-  const currentSelectedCard = selectedCard ?? (cardData?.id ? Number(cardData.id) : null);
-  const currentSelectedMatrix = selectedCard === null ? cardData?.matrix || null : selectedMatrix;
+  const currentSelectedCard = selectedCard === undefined
+    ? (cardData?.id ? Number(cardData.id) : null)
+    : selectedCard;
+  const currentSelectedMatrix = selectedCard === undefined ? cardData?.matrix || null : selectedMatrix;
   const selectionLocked = isGameStarted
     || (displayedCountdown !== null && displayedCountdown !== undefined && displayedCountdown <= 0);
   const hasCountdown = displayedCountdown !== null && displayedCountdown !== undefined;
@@ -205,6 +207,10 @@ export default function CardSelection({
     if (cardNumber === currentSelectedCard) {
       if (!activeRoomId) return;
 
+      const previousCard = currentSelectedCard;
+      const previousMatrix = currentSelectedMatrix;
+      setSelectedCard(null);
+      setSelectedMatrix(null);
       setLoading(true);
       try {
         const res = await fetchApi(`/rooms/${encodeURIComponent(activeRoomId)}/my-card`, {
@@ -216,11 +222,11 @@ export default function CardSelection({
           throw new Error(data.error || 'Failed to unselect card');
         }
 
-        setSelectedCard(null);
-        setSelectedMatrix(null);
         onCardUpdated?.(null);
         navigate(`/select-card?stake=${encodeURIComponent(stake)}`, { replace: true });
       } catch (err) {
+        setSelectedCard(previousCard);
+        setSelectedMatrix(previousMatrix);
         showToast(String(err.message || 'Failed to unselect card'));
       } finally {
         setLoading(false);
