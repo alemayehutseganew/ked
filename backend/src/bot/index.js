@@ -3,6 +3,7 @@ const db = require('../db')
 
 const userStates = {}
 const SUPPORT_TEXT = '\n\nFor more support call or chat with +251930702649'
+const DISCUSSION_GROUP_URL = 'https://t.me/go9872'
 
 const botTranslations = {
   en: {
@@ -18,6 +19,7 @@ const botTranslations = {
     withdraw: '💸 Withdraw',
     myRoom: '🏠 My Room',
     help: '❓ Help',
+    discussionGroup: '💬 Join Discussion Group',
     launchPrompt: 'Tap the button below to launch the game:',
     playBingo: '🎰 Play Bingo',
     balance: '💰 Your current balance is: ETB {{amount}}',
@@ -40,7 +42,9 @@ const botTranslations = {
 • Complete a diagonal line.
 • Mark all four corners.
 
-✅ If there is more than one winner, the prize pool is split among them.`,
+✅ If there is more than one winner, the prize pool is split among them.
+
+💬 Join our discussion group: ${DISCUSSION_GROUP_URL}`,
     registerPrompt: 'To complete your registration, please share your phone number:',
     sharePhone: '📱 Share Phone Number',
     depositInstructions: '💳 To Deposit:\n\n👤 Name: {{name}}\n📱 Telebirr: {{phone}}\n\n1. Open your Telebirr app\n2. Send money to the number above\n3. Copy the SMS you receive\n\n👇 Now paste the full SMS here:',
@@ -79,6 +83,7 @@ const botTranslations = {
     withdraw: '💸 ገንዘብ ያውጡ',
     myRoom: '🏠 ክፍሌ',
     help: '❓ እርዳታ',
+    discussionGroup: '💬 የውይይት ቡድንን ይቀላቀሉ',
     launchPrompt: 'ጨዋታውን ለመክፈት ከታች ያለውን ቁልፍ ይጫኑ፦',
     playBingo: '🎰 ቢንጎ ይጫወቱ',
     balance: '💰 የአሁኑ ቀሪ ሂሳብዎ፦ {{amount}} ብር',
@@ -101,7 +106,9 @@ const botTranslations = {
 • ወደሁለቱም አግዳሚ (Diagonal) መስመር ከሰሩ
 • አራቱ ማእዘናት (ኮርነር) ከተጠሩ አሸናፊ ይሆናሉ።
 
-✅ ከአንድ በላይ አሸናፊ ካለ ደራሽ ገንዘቡን ይከፋፈላሉ።`,
+✅ ከአንድ በላይ አሸናፊ ካለ ደራሽ ገንዘቡን ይከፋፈላሉ።
+
+💬 የውይይት ቡድናችንን ይቀላቀሉ: ${DISCUSSION_GROUP_URL}`,
     registerPrompt: 'ምዝገባዎን ለማጠናቀቅ እባክዎ ስልክ ቁጥርዎን ያጋሩ፦',
     sharePhone: '📱 ስልክ ቁጥር ያጋሩ',
     depositInstructions: '💳 ገንዘብ ለማስገባት፦\n\n👤 ስም፦ {{name}}\n📱 ቴሌብር፦ {{phone}}\n\n1. የቴሌብር መተግበሪያዎን ይክፈቱ።\n2. ከላይ ወደተጠቀሰው ቁጥር ገንዘብ ይላኩ።\n3. የደረሰዎትን ኤስኤምኤስ ኮፒ ያድርጉ።\n\n👇 አሁን ሙሉውን ኤስኤምኤስ እዚህ ይለጥፉ፦',
@@ -213,7 +220,8 @@ function getMainMenu(lang = 'en') {
         [{ text: t.playGame, web_app: { url: process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL } }],
         [{ text: t.checkBalance, callback_data: 'menu_balance' }, { text: t.deposit, callback_data: 'menu_deposit' }],
         [{ text: t.withdraw, callback_data: 'menu_withdraw' }, { text: t.myRoom, callback_data: 'menu_room' }],
-        [{ text: t.help, callback_data: 'menu_help' }]
+        [{ text: t.help, callback_data: 'menu_help' }],
+        [{ text: t.discussionGroup, url: DISCUSSION_GROUP_URL }]
       ]
     }
   }
@@ -273,6 +281,9 @@ bot.start(async (ctx) => {
         ],
         [
           { text: '👥 Invite Friends & Earn 5%', callback_data: 'show_invite' }
+        ],
+        [
+          { text: '💬 Join Discussion Group', url: DISCUSSION_GROUP_URL }
         ]
       ]
     }
