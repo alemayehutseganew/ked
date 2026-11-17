@@ -169,39 +169,36 @@ const GameScreenContent = () => {
       }
     });
     socket.on('game_over', (data) => {
+      localStorage.removeItem('activeGameRoom');
       if (data.reason === 'no_winner' || (Array.isArray(data.winners) && data.winners.length === 0)) {
-        navigate(`/select-card?stake=${stake}`);
-        return;
-      }
-
-      const myId = String(userId);
-      const isWinner = data.winnerIds?.some(id => String(id) === myId);
-      if (isSpectator) {
         setGameResult({
           type: 'loss',
           titleKey: 'gameOver',
-          messageKey: 'winnerIs',
-          messageValues: { name: data.winnerName },
-        });
-        return;
-      }
-
-      if (isWinner) {
-        setGameResult({
-          type: 'win',
-          titleKey: 'congratulations',
-          messageKey: 'youWon',
-          messageValues: { amount: Number(data.payout).toFixed(2) },
+          messageKey: 'roundEnded',
         });
       } else {
-        setGameResult({
-          type: 'loss',
-          titleKey: 'gameOver',
-          messageKey: 'winnerIs',
-          messageValues: { name: data.winnerName },
-        });
+        const myId = String(userId);
+        const isWinner = data.winnerIds?.some(id => String(id) === myId);
+        if (isSpectator || !isWinner) {
+          setGameResult({
+            type: 'loss',
+            titleKey: 'gameOver',
+            messageKey: 'winnerIs',
+            messageValues: { name: data.winnerName },
+          });
+        } else {
+          setGameResult({
+            type: 'win',
+            titleKey: 'congratulations',
+            messageKey: 'youWon',
+            messageValues: { amount: Number(data.payout).toFixed(2) },
+          });
+        }
       }
-      setTimeout(() => { setGameResult(null); navigate('/'); }, 5000);
+      setTimeout(() => {
+        setGameResult(null);
+        navigate(`/select-card?stake=${encodeURIComponent(stake)}`, { replace: true });
+      }, 3000);
     });
     socket.on('game_ended_for_spectators', () => {
       if (!isSpectator) return
@@ -220,11 +217,11 @@ const GameScreenContent = () => {
       navigate(`/select-card?stake=${data.stake || stake}`);
     });
     socket.on('room_reset', (data) => {
-      if (!isSpectator) return
+      localStorage.removeItem('activeGameRoom');
       setGameResult(null);
       setSpectatorNumbers([]);
       setSpectatorBall(null);
-      navigate(`/select-card?stake=${data.stake || stake}`);
+      navigate(`/select-card?stake=${encodeURIComponent(data.stake || stake)}`, { replace: true });
     });
     socket.on('bingo_result', (data) => {
       setBingoMessage(data);

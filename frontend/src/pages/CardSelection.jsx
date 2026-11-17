@@ -262,13 +262,23 @@ export default function CardSelection({
         throw new Error(data.error || t('joinFailed'));
       }
 
-      if (data.status === 'spectator') {
+      if (data.status === 'spectator' || data.status === 'reconnected') {
+        const spectator = data.status === 'spectator';
         SocketService.connect().emit('join_room', {
           roomId: data.roomId,
           stake: Number(data.stake || stake),
-          spectator: true,
+          spectator,
         });
-        navigate(`/game?roomId=${data.roomId}&stake=${stake}&spectator=true`);
+        if (!spectator) {
+          localStorage.setItem('activeGameRoom', JSON.stringify({
+            roomId: data.roomId,
+            stake: Number(data.stake || stake),
+          }));
+        }
+        navigate(
+          `/game?roomId=${encodeURIComponent(data.roomId)}&stake=${encodeURIComponent(data.stake || stake)}&spectator=${spectator}`,
+          { replace: true }
+        );
         return;
       }
 

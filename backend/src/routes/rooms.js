@@ -106,6 +106,9 @@ router.post('/join', userAuth, async (req, res) => {
         existing = await trx('room_participants')
           .where({ room_id: room.id, user_id: user.id })
           .first()
+        if (['PLAYING', 'CLAIMING'].includes(room.status)) {
+          return { status: existing ? 'reconnected' : 'spectator', room }
+        }
         if (!existing) throw new Error('NOT_ROOM_PARTICIPANT')
         if (!['WAITING', 'COUNTDOWN'].includes(room.status)) {
           throw new Error('CARD_CHANGE_LOCKED')
@@ -114,14 +117,12 @@ router.post('/join', userAuth, async (req, res) => {
         existing = await trx('room_participants')
           .where({ room_id: activeRoom.id, user_id: user.id })
           .first()
-        if (activeRoom.status === 'COUNTDOWN') {
+        if (['PLAYING', 'CLAIMING'].includes(activeRoom.status)) {
+          return { status: existing ? 'reconnected' : 'spectator', room: activeRoom }
+        } else if (activeRoom.status === 'COUNTDOWN') {
           room = activeRoom
         } else if (existing && activeRoom.status === 'WAITING') {
           room = activeRoom
-        } else if (existing) {
-          throw new Error('CARD_CHANGE_LOCKED')
-        } else if (['PLAYING', 'CLAIMING'].includes(activeRoom.status)) {
-          return { status: 'spectator', room: activeRoom }
         }
       }
 
@@ -223,16 +224,16 @@ router.post('/join', userAuth, async (req, res) => {
        }
     })
 
-    if (result.status === 'spectator') {
+    if (result.status === 'spectator' || result.status === 'reconnected') {
        const io = req.app.get('io')
        if (io) {
          await io.in(`user_${user.id}`).socketsJoin(result.room.id)
        }
        return res.json({
-         status: 'spectator',
+         status: result.status,
          roomId: result.room.id,
          stake: result.room.stake_amount,
-         message: 'Game already in progress',
+         ...(result.status === 'spectator' ? { message: 'Game already in progress' } : {}),
        })
     }
 
