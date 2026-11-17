@@ -92,6 +92,7 @@ const GameScreenContent = () => {
     if (!userId) return;
 
     const handleJoin = () => {
+      localStorage.setItem('activeGameRoom', JSON.stringify({ roomId, stake }))
       socket.emit('join_room', { roomId, userId, stake, spectator: isSpectator });
     };
 
@@ -141,6 +142,19 @@ const GameScreenContent = () => {
     socket.on('countdown_tick', (data) => setCountdown(data.timeLeft ?? data.seconds ?? null));
     socket.on('my_cards', (data) => {
       if (data.cards && data.cards.length > 0) setCardsData(data.cards);
+    });
+    socket.on('error', (err) => {
+      const msg = String(err?.message || err || '')
+      if (
+        msg === 'Room not found' ||
+        msg.includes('ended') ||
+        msg.includes('already started') ||
+        msg.includes('ROOM_NOT_FOUND')
+      ) {
+        console.log('[Game] Active game no longer exists. Redirecting to card selection.')
+        localStorage.removeItem('activeGameRoom')
+        navigate('/select-card?stake=' + encodeURIComponent(stake), { replace: true })
+      }
     });
     socket.on('game_started', () => {
       setCountdown(null);
@@ -211,6 +225,7 @@ const GameScreenContent = () => {
     });
     socket.on('next_game_ready', (data) => {
       if (!isSpectator) return
+      localStorage.removeItem('activeGameRoom')
       setGameResult(null);
       setSpectatorNumbers([]);
       setSpectatorBall(null);
@@ -246,6 +261,7 @@ const GameScreenContent = () => {
       socket.off('game_aborted');
       socket.off('countdown_tick');
       socket.off('my_cards');
+      socket.off('error');
       socket.off('game_started');
       socket.off('new_number_called');
       socket.off('game_over');

@@ -109,6 +109,14 @@ router.post('/join', userAuth, async (req, res) => {
         if (['PLAYING', 'CLAIMING'].includes(room.status)) {
           return { status: existing ? 'reconnected' : 'spectator', room }
         }
+        if (existing && ['WAITING', 'COUNTDOWN'].includes(room.status)) {
+          // They are already in the room. Update their card instead of rejecting.
+          await trx('room_card_selections')
+            .where({ room_id: room.id, user_id: user.id })
+            .update({ card_id: cardNumber, card: JSON.stringify(matrix) });
+          
+          return { room: room, card: { id: cardNumber, matrix } };
+        }
         if (!existing) throw new Error('NOT_ROOM_PARTICIPANT')
         if (!['WAITING', 'COUNTDOWN'].includes(room.status)) {
           throw new Error('CARD_CHANGE_LOCKED')

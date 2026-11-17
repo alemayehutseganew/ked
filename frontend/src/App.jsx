@@ -1,6 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useNavigate } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import Lobby from './pages/Lobby'
 import CardSelection from './pages/CardSelection'
 import GameScreen from './pages/GameScreen'
 import Wallet from './pages/Wallet'
@@ -21,6 +20,7 @@ import AdminPayments from './admin/AdminPayments'
 
 
 export default function App() {
+  const navigate = useNavigate()
   useEffect(() => {
     const tg = window.Telegram?.WebApp
     tg?.ready()
@@ -48,17 +48,31 @@ export default function App() {
           localStorage.setItem('telegramId', String(data.user.telegram_id))
           SocketService.connect(data.token)
           window.dispatchEvent(new Event('wallet-refresh'))
+
+          const activeRoomData = localStorage.getItem('activeGameRoom')
+          if (activeRoomData) {
+            try {
+              const { roomId, stake } = JSON.parse(activeRoomData)
+              if (roomId && stake) {
+                navigate('/game?roomId=' + encodeURIComponent(roomId) + '&stake=' + stake, { replace: true })
+                return
+              }
+            } catch (err) {
+              console.error('[App] Failed to parse active game data', err)
+            }
+          }
+          navigate('/select-card?stake=10', { replace: true })
         }
       })
       .catch(() => {})
-  }, [])
+  }, [navigate])
 
   return (
     <LanguageProvider>
       <WalletProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Lobby />} />
+            <Route path="/" element={<Navigate to="/select-card?stake=10" replace />} />
             <Route path="/card-selection" element={<CardSelection />} />
             <Route path="/select-card" element={<CardSelection />} />
             <Route path="/select-cards" element={<CardSelection />} />
