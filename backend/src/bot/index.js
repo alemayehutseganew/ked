@@ -161,6 +161,16 @@ bot.use((ctx, next) => {
 const DEFAULT_FRONTEND_URL = 'https://ked-seven.vercel.app'
 const FRONTEND_BASE = (process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL).replace(/\/+$/, '')
 
+function getStakeKeyboard(referralRef) {
+  const stakes = [10, 50, 100]
+  return stakes.map((stake) => {
+    const url = new URL(`${FRONTEND_BASE}/select-card`)
+    url.searchParams.set('stake', String(stake))
+    if (referralRef) url.searchParams.set('ref', referralRef)
+    return [{ text: `🎮 Play ${stake} ETB`, web_app: { url: url.toString() } }]
+  })
+}
+
 function getFrontendUrl(referralRef) {
   const url = new URL(process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL)
   if (referralRef) url.searchParams.set('ref', referralRef)
@@ -279,9 +289,7 @@ bot.start(async (ctx) => {
           { text: '🇬🇧 English', callback_data: 'lang_en' },
           { text: '🇪🇹 አማርኛ', callback_data: 'lang_am' }
         ],
-        [
-          { text: '🎮 Open Game', web_app: { url: getFrontendUrl(referralRef) } }
-        ],
+        ...getStakeKeyboard(referralRef),
         [
           { text: '👥 Invite Friends & Earn 5%', callback_data: 'show_invite' }
         ],
@@ -306,11 +314,7 @@ bot.command(['invite', 'referral'], async (ctx) => {
 bot.command('play', async (ctx) => {
   const lang = await getUserLanguage(ctx)
   ctx.reply(botText(lang, 'launchPrompt') + SUPPORT_TEXT, {
-    reply_markup: { inline_keyboard: [
-      [{ text: '🎮 Play 10 ETB', web_app: { url: `${FRONTEND_BASE}/select-card?stake=10` } }],
-      [{ text: '🎮 Play 50 ETB', web_app: { url: `${FRONTEND_BASE}/select-card?stake=50` } }],
-      [{ text: '🎮 Play 100 ETB', web_app: { url: `${FRONTEND_BASE}/select-card?stake=100` } }]
-    ] }
+    reply_markup: { inline_keyboard: getStakeKeyboard() }
   }).catch(() => {})
 })
 

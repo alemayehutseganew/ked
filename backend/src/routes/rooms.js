@@ -54,7 +54,9 @@ router.get('/active-cards', async (req, res) => {
     }
     const rooms = await db('game_rooms')
       .where({ stake_amount: stake })
-      .whereIn('status', ['WAITING', 'COUNTDOWN', 'PLAYING', 'CLAIMING'])
+      .whereIn('status', ['WAITING', 'COUNTDOWN'])
+      .where('created_at', '>', db.raw("NOW() - INTERVAL '2 hours'"))
+      .select('id')
     const roomIds = rooms.map((r) => r.id)
     if (roomIds.length === 0) {
       return res.json({ takenCards: [] })
@@ -108,14 +110,6 @@ router.post('/join', userAuth, async (req, res) => {
           .first()
         if (['PLAYING', 'CLAIMING'].includes(room.status)) {
           return { status: existing ? 'reconnected' : 'spectator', room }
-        }
-        if (existing && ['WAITING', 'COUNTDOWN'].includes(room.status)) {
-          // They are already in the room. Update their card instead of rejecting.
-          await trx('room_card_selections')
-            .where({ room_id: room.id, user_id: user.id })
-            .update({ card_id: cardNumber, card: JSON.stringify(matrix) });
-          
-          return { room: room, card: { id: cardNumber, matrix } };
         }
         if (!existing) throw new Error('NOT_ROOM_PARTICIPANT')
         if (!['WAITING', 'COUNTDOWN'].includes(room.status)) {
@@ -182,7 +176,7 @@ router.post('/join', userAuth, async (req, res) => {
       }
 
       // 6. ENSURE USER HAS A CARD (use user-selected card_number)
-      if (!cardNumber || cardNumber < 1 || cardNumber > 400) {
+      if (!Number.isInteger(cardNumber) || cardNumber < 1 || cardNumber > 400) {
         throw new Error('INVALID_CARD_NUMBER');
       }
 
@@ -195,10 +189,10 @@ router.post('/join', userAuth, async (req, res) => {
         throw new Error('CARD_ALREADY_TAKEN');
       }
 
+      const matrix = generateCardFromNumber(cardNumber);
       let cardSelection = await trx('room_card_selections')
         .where({ room_id: room.id, user_id: user.id })
         .first();
-      const matrix = generateCardFromNumber(cardNumber);
       if (cardSelection) {
         const [updated] = await trx('room_card_selections')
           .where({ room_id: room.id, user_id: user.id })

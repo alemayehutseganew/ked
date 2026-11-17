@@ -245,23 +245,7 @@ export default function CardSelection({
     setSelectedMatrix(null);
     setLoading(true);
 
-    try {
-      const res = await fetchApi('/rooms/join', {
-        method: 'POST',
-        body: JSON.stringify({
-          stake: Number(stake),
-          card_number: cardNumber,
-          userId: localStorage.getItem('dbUserId'),
-          ...(roomId ? { roomId } : {}),
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || t('joinFailed'));
-      }
-
+    const applyJoinResult = (data) => {
       if (data.status === 'spectator' || data.status === 'reconnected') {
         const spectator = data.status === 'spectator';
         SocketService.connect().emit('join_room', {
@@ -304,15 +288,33 @@ export default function CardSelection({
       if (roomId) {
         onCardUpdated?.(updatedCard);
       } else {
-        navigate(`/game?roomId=${data.roomId}&stake=${stake}`);
+        navigate(`/game?roomId=${encodeURIComponent(joinedRoomId)}&stake=${encodeURIComponent(stake)}`);
       }
+    };
+
+    try {
+      const res = await fetchApi('/rooms/join', {
+        method: 'POST',
+        body: JSON.stringify({
+          stake: Number(stake),
+          card_number: cardNumber,
+          userId: localStorage.getItem('dbUserId'),
+          ...(roomId ? { roomId } : {}),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || t('joinFailed'));
+      }
+
+      applyJoinResult(data);
     } catch (err) {
       const errorText = String(err.message || '');
       const errorMessage = errorText.toLowerCase();
       
-      // If backend says we aren't in the room, auto-trigger a fresh join
       if (errorMessage.includes('join the room before changing your card') || errorMessage.includes('not room participant')) {
-        console.log('[CardSelect] NOT_ROOM_PARTICIPANT auto-retrying join...');
         try {
           const joinRes = await fetchApi('/rooms/join', {
             method: 'POST',
@@ -320,79 +322,21 @@ export default function CardSelection({
               stake: Number(stake),
               card_number: cardNumber,
               userId: localStorage.getItem('dbUserId'),
-              ...(roomId ? { roomId } : {}),
             }),
           });
           const joinData = await joinRes.json();
           if (!joinRes.ok) throw new Error(joinData.error);
-          
-          // After successful re-join, proceed with card selection logic
-          setActiveRoomId(joinData.roomId);
-          localStorage.setItem('activeGameRoom', JSON.stringify({
-            roomId: joinData.roomId,
-            stake: Number(joinData.stake || stake),
-          }));
-          
-          SocketService.connect().emit('join_room', {
-            roomId: joinData.roomId,
-            stake: Number(joinData.stake || stake),
-          });
-          
-          const updatedCard = {
-            id: Number(joinData.card.id),
-            matrix: joinData.card.matrix,
-          };
-          setSelectedCard(updatedCard.id);
-          setSelectedMatrix(updatedCard.matrix);
-          
-          if (data.status === 'spectator' || data.status === 'reconnected') {
-            const spectator = data.status === 'spectator';
-            SocketService.connect().emit('join_room', {
-              roomId: data.roomId,
-              stake: Number(data.stake || stake),
-              spectator,
-            });
-            if (!spectator) {
-              navigate(
-                `/game?roomId=${encodeURIComponent(data.roomId)}&stake=${encodeURIComponent(data.stake || stake)}&spectator=${spectator}`,
-                { replace: true }
-              );
-              return;
-            }
-          }
-          
-          const joinedRoomId = joinData.roomId || activeRoomId;
-          setActiveRoomId(joinedRoomId);
-          SocketService.connect().emit('join_room', {
-            roomId: joinedRoomId,
-            stake: Number(joinData.stake || stake),
-          });
-          
-          localStorage.setItem('activeGameRoom', JSON.stringify({
-            roomId: joinedRoomId,
-            stake: Number(joinData.stake || stake),
-          }));
-          
-          const card = {
-            id: Number(joinData.card.id),
-            matrix: joinData.card.matrix,
-          };
-          setSelectedCard(card.id);
-          setSelectedMatrix(card.matrix);
-          
-          if (roomId) {
-            onCardUpdated?.(card);
-          } else {
-            navigate(`/game?roomId=${joinData.roomId}&stake=${stake}`);
-          }
+          applyJoinResult(joinData);
           return;
         } catch (retryErr) {
           console.error('[CardSelect] Join retry failed:', retryErr);
-          // Fall through to normal error handling below
+          showToast(String(retryErr.message || t('joinFailed')));
+          setSelectedCard(previousCard);
+          setSelectedMatrix(previousMatrix);
+          return;
         }
       }
       
-      // Original error handling fallback
       if (roomId && ['started', 'in progress', 'playing', 'cannot join'].some((phrase) => (
         errorMessage.includes(phrase)
       ))) {

@@ -31,7 +31,9 @@ export default function App() {
 
     const initData = tg?.initData || ''
     if (!initData) return
-    const referralCode = new URLSearchParams(window.location.search).get('ref') || ''
+    const searchParams = new URLSearchParams(window.location.search)
+    const referralCode = searchParams.get('ref') || ''
+    const stake = searchParams.get('stake') || '10'
     fetchApi('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -61,7 +63,7 @@ export default function App() {
               console.error('[App] Failed to parse active game data', err)
             }
           }
-          navigate('/select-card?stake=10', { replace: true })
+          navigate(`/select-card?stake=${encodeURIComponent(stake)}`, { replace: true })
         }
       })
       .catch(() => {})
