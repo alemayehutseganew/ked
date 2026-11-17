@@ -629,7 +629,31 @@ function initGameHandler(io) {
           })
         }
 
-        // Reconnecting during an active round never restores player status.
+        if (
+          participant &&
+          ['PLAYING', 'CLAIMING', 'COUNTDOWN'].includes(persistedRoom.status)
+        ) {
+          const room = rooms[roomId]
+          room.players[socket.id] = { socketId: socket.id, userId: user.id }
+          const selections = await db('room_card_selections')
+            .where({ room_id: roomId, user_id: user.id })
+          socket.emit('my_cards', {
+            cards: selections.map((selection) => ({
+              id: selection.card_id,
+              matrix: typeof selection.card === 'string'
+                ? JSON.parse(selection.card)
+                : selection.card,
+            })),
+          })
+          socket.emit('sync_game_state', {
+            calledNumbers: Array.from(room.calledNumbers),
+            currentBall: room.latestNumber,
+            status: room.status,
+            players: Object.keys(room.players).length,
+          })
+          return
+        }
+
         if (['PLAYING', 'CLAIMING'].includes(persistedRoom.status)) {
           const room = rooms[roomId]
           const playerCount = await emitCurrentRoomState(socket, roomId, room)

@@ -2,6 +2,7 @@ import { useEffect, useState, Fragment } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import CardSelection from './CardSelection';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import SocketService from '../services/socket';
 import { playNumberAudio, toggleVoice, unlockAudio } from '../utils/bingoSounds';
 import { useWallet } from '../WalletContext';
@@ -34,7 +35,7 @@ const getBallGradient = (letter) => {
   }
 };
 
-const GameScreen = () => {
+const GameScreenContent = () => {
   const socket = SocketService.get() || SocketService.connect()
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -44,6 +45,7 @@ const GameScreen = () => {
   const userId = localStorage.getItem('dbUserId');
   const { t, i18n } = useTranslation();
   const { balance } = useWallet();
+  const [isSpectator, setIsSpectator] = useState(spectatorFromUrl);
 
   const [calledNumbers, setCalledNumbers] = useState([]);
   const [currentBall, setCurrentBall] = useState(null);
@@ -51,11 +53,11 @@ const GameScreen = () => {
   const [markedNumbers, setMarkedNumbers] = useState([]);
   const [cardsData, setCardsData] = useState([]);
   const [playerCount, setPlayerCount] = useState(0);
+  const [gameStatus, setGameStatus] = useState('WAITING');
   const playersCount = playerCount;
   const [readyPlayers, setReadyPlayers] = useState(0);
   const [countdown, setCountdown] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
-  const isSpectator = spectatorFromUrl;
   const [spectatorNumbers, setSpectatorNumbers] = useState([]);
   const [spectatorBall, setSpectatorBall] = useState(null);
   const [bingoMessage, setBingoMessage] = useState(null);
@@ -117,6 +119,17 @@ const GameScreen = () => {
       setSpectatorBall(data.currentBall || null);
       if (Number.isFinite(Number(data.players))) setPlayerCount(Number(data.players));
     });
+    socket.on('sync_game_state', (data) => {
+      console.log('[SOCKET] Synced game state:', data);
+      setIsSpectator(false);
+      if (data.calledNumbers) setCalledNumbers(data.calledNumbers);
+      if (data.currentBall) setCurrentBall(data.currentBall);
+      if (data.status) {
+        setGameStatus(data.status);
+        setGameStarted(['PLAYING', 'CLAIMING'].includes(data.status));
+      }
+      if (Number.isFinite(Number(data.players))) setPlayerCount(Number(data.players));
+    });
     socket.on('insufficient_funds', (data) => {
       alert(`💰 ${data.message}`);
       window.location.href = '/wallet';
@@ -127,11 +140,12 @@ const GameScreen = () => {
     });
     socket.on('countdown_tick', (data) => setCountdown(data.timeLeft ?? data.seconds ?? null));
     socket.on('my_cards', (data) => {
-      if (!isSpectator && data.cards && data.cards.length > 0) setCardsData(data.cards);
+      if (data.cards && data.cards.length > 0) setCardsData(data.cards);
     });
     socket.on('game_started', () => {
       setCountdown(null);
       setGameStarted(true);
+      setGameStatus('PLAYING');
     });
     socket.on('new_number_called', (data) => {
       const ball = data.ball || `${data.letter}-${data.number}`;
@@ -230,6 +244,7 @@ const GameScreen = () => {
       socket.off('players_updated');
       socket.off('game_in_progress');
       socket.off('spectator_sync');
+      socket.off('sync_game_state');
       socket.off('insufficient_funds');
       socket.off('game_aborted');
       socket.off('countdown_tick');
@@ -245,6 +260,22 @@ const GameScreen = () => {
     };
   }, [socket, roomId, userId, stake, isSpectator, navigate]);
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible' || !userId) return;
+
+      console.log('[App] Resumed from background. Reconnecting socket...');
+      if (!socket.connected) {
+        socket.connect();
+        return;
+      }
+      socket.emit('join_room', { roomId, userId, stake, spectator: isSpectator });
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [socket, roomId, userId, stake, isSpectator]);
+
   const handleDaub = (num) => {
     if (!calledNumbers.map(Number).includes(Number(num))) return;
     if (markedNumbers.map(Number).includes(Number(num))) return;
@@ -252,7 +283,7 @@ const GameScreen = () => {
   };
 
   const handleBingoClick = () => {
-    if (!gameStarted || isSpectator) return;
+    if ((!gameStarted && !['PLAYING', 'CLAIMING'].includes(gameStatus)) || isSpectator) return;
     const cardId = cardsData[0]?.id || cardsData[0]?.cardId;
     if (!cardId) return;
     socket.emit('claim_bingo', { roomId, userId: localStorage.getItem('dbUserId'), cardId, markedNumbers });
@@ -581,5 +612,11 @@ const GameScreen = () => {
     </div>
   );
 };
+
+const GameScreen = () => (
+  <ErrorBoundary>
+    <GameScreenContent />
+  </ErrorBoundary>
+);
 
 export default GameScreen;
