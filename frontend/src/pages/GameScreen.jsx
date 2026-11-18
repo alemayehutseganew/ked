@@ -70,23 +70,11 @@ const GameScreenContent = () => {
   const [spectatorBall, setSpectatorBall] = useState(null);
   const [bingoMessage, setBingoMessage] = useState(null);
   const [gameResult, setGameResult] = useState(null);
-  const [isVoiceOn, setIsVoiceOn] = useState(true);
+  const [isVoiceOn, setIsVoiceOn] = useState(false);
 
   useEffect(() => {
-    const handleFirstTap = async () => {
-      const unlocked = await unlockAudio();
-      if (!unlocked) return;
-
-      document.removeEventListener('touchstart', handleFirstTap);
-      document.removeEventListener('click', handleFirstTap);
-    };
-
-    document.addEventListener('touchstart', handleFirstTap, { passive: true });
-    document.addEventListener('click', handleFirstTap);
-    return () => {
-      document.removeEventListener('touchstart', handleFirstTap);
-      document.removeEventListener('click', handleFirstTap);
-    };
+    toggleVoice(false);
+    return () => toggleVoice(false);
   }, []);
 
   const handleVoiceToggle = () => {

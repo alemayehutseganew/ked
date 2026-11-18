@@ -6,7 +6,7 @@ const bingoRanges = {
   O: [61, 75],
 };
 
-let isVoiceEnabled = true;
+let isVoiceEnabled = false;
 let isAudioUnlocked = false;
 let audioUnlockPromise = null;
 const audioCache = Object.create(null);
