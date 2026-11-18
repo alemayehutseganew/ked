@@ -1,5 +1,5 @@
-import { useEffect, useNavigate } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import CardSelection from './pages/CardSelection'
 import GameScreen from './pages/GameScreen'
 import Wallet from './pages/Wallet'
@@ -17,13 +17,16 @@ import AdminDashboard from './admin/AdminDashboard'
 import AdminUsers from './admin/AdminUsers'
 import AdminGames from './admin/AdminGames'
 import AdminPayments from './admin/AdminPayments'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }
 

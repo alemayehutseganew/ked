@@ -29,7 +29,10 @@ export default function CardSelection({
 }) {
   const [searchParams] = useSearchParams();
   const rawStake = searchParams.get('stake');
-  const stake = rawStake ? Number(rawStake) || 10 : 10;
+  const parsedStake = Number(rawStake);
+  const stake = rawStake !== null && Number.isFinite(parsedStake) && parsedStake > 0
+    ? parsedStake
+    : 10;
   const roomId = searchParams.get('roomId');
   const [activeRoomId, setActiveRoomId] = useState(() => {
     if (roomId) return roomId;
@@ -51,17 +54,18 @@ export default function CardSelection({
   const [takenCards, setTakenCards] = useState([]);
   const [socketPlayersCount, setSocketPlayersCount] = useState(null);
   const [socketCountdown, setSocketCountdown] = useState(undefined);
-  const [selectedCard, setSelectedCard] = useState(undefined);
+  const [selectedCard, setSelectedCard] = useState(null);
   const [selectedMatrix, setSelectedMatrix] = useState(null);
+  const [hasLocalSelection, setHasLocalSelection] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'error' });
   const [toastVisible, setToastVisible] = useState(false);
   const displayedPlayersCount = socketPlayersCount ?? playersCount;
   const displayedCountdown = socketCountdown !== undefined ? socketCountdown : countdown;
-  const currentSelectedCard = selectedCard === undefined
-    ? (cardData?.id ? Number(cardData.id) : null)
-    : selectedCard;
-  const currentSelectedMatrix = selectedCard === undefined ? cardData?.matrix || null : selectedMatrix;
+  const currentSelectedCard = hasLocalSelection
+    ? selectedCard
+    : (cardData?.id ? Number(cardData.id) : null);
+  const currentSelectedMatrix = hasLocalSelection ? selectedMatrix : cardData?.matrix || null;
   const selectionLocked = isGameStarted
     || (displayedCountdown !== null && displayedCountdown !== undefined && displayedCountdown <= 0);
   const hasCountdown = displayedCountdown !== null && displayedCountdown !== undefined;
@@ -205,6 +209,8 @@ export default function CardSelection({
 
       const previousCard = currentSelectedCard;
       const previousMatrix = currentSelectedMatrix;
+      const previousHasLocalSelection = hasLocalSelection;
+      setHasLocalSelection(true);
       setSelectedCard(null);
       setSelectedMatrix(null);
       setLoading(true);
@@ -223,6 +229,7 @@ export default function CardSelection({
       } catch (err) {
         setSelectedCard(previousCard);
         setSelectedMatrix(previousMatrix);
+        setHasLocalSelection(previousHasLocalSelection);
         showToast(String(err.message || 'Failed to unselect card'));
       } finally {
         setLoading(false);
@@ -234,10 +241,12 @@ export default function CardSelection({
 
     const previousCard = currentSelectedCard;
     const previousMatrix = currentSelectedMatrix;
+    const previousHasLocalSelection = hasLocalSelection;
     const previousTakenCards = takenCards;
     setTakenCards((prev) => prev.filter((takenCard) => (
       takenCard !== previousCard && takenCard !== cardNumber
     )));
+    setHasLocalSelection(true);
     setSelectedCard(cardNumber);
     setSelectedMatrix(null);
     setLoading(true);
@@ -341,6 +350,7 @@ export default function CardSelection({
           showToast(String(retryErr.message || t('joinFailed')));
           setSelectedCard(previousCard);
           setSelectedMatrix(previousMatrix);
+          setHasLocalSelection(previousHasLocalSelection);
           setTakenCards(previousTakenCards);
           return;
         }
@@ -359,6 +369,7 @@ export default function CardSelection({
 
       setSelectedCard(previousCard);
       setSelectedMatrix(previousMatrix);
+      setHasLocalSelection(previousHasLocalSelection);
       setTakenCards(previousTakenCards);
       showToast(errorText || t('joinFailed'));
       if (errorMessage.includes('taken')) {
