@@ -20,6 +20,29 @@ import AdminPayments from './admin/AdminPayments'
 
 
 export default function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
+  )
+}
+
+function getStoredActiveRoom() {
+  const activeRoomData = localStorage.getItem('activeGameRoom')
+  if (!activeRoomData) return null
+
+  try {
+    const { roomId, stake } = JSON.parse(activeRoomData)
+    if (!roomId) return null
+    return { roomId, stake: Number(stake) || 10 }
+  } catch (err) {
+    console.error('[App] Failed to parse active game data', err)
+    localStorage.removeItem('activeGameRoom')
+    return null
+  }
+}
+
+function AppContent() {
   const navigate = useNavigate()
   useEffect(() => {
     const tg = window.Telegram?.WebApp
@@ -30,16 +53,29 @@ export default function App() {
     if (existingToken) SocketService.connect(existingToken)
 
     const initData = tg?.initData || ''
-    if (!initData) return
     const searchParams = new URLSearchParams(window.location.search)
     const referralCode = searchParams.get('ref') || ''
     const stake = searchParams.get('stake') || '10'
+    if (!initData) {
+      const activeRoom = getStoredActiveRoom()
+      if (existingToken && activeRoom) {
+        navigate(
+          `/game?roomId=${encodeURIComponent(activeRoom.roomId)}&stake=${encodeURIComponent(activeRoom.stake)}`,
+          { replace: true }
+        )
+      }
+      return
+    }
+
     fetchApi('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ initData, referralCode }),
     })
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`Authentication failed: ${r.status}`)
+        return r.json()
+      })
       .then((data) => {
         if (data.token) {
           localStorage.setItem('token', data.token)
@@ -51,53 +87,46 @@ export default function App() {
           SocketService.connect(data.token)
           window.dispatchEvent(new Event('wallet-refresh'))
 
-          const activeRoomData = localStorage.getItem('activeGameRoom')
-          if (activeRoomData) {
-            try {
-              const { roomId, stake } = JSON.parse(activeRoomData)
-              if (roomId && stake) {
-                navigate('/game?roomId=' + encodeURIComponent(roomId) + '&stake=' + stake, { replace: true })
-                return
-              }
-            } catch (err) {
-              console.error('[App] Failed to parse active game data', err)
-            }
+          const activeRoom = getStoredActiveRoom()
+          if (activeRoom) {
+            navigate(
+              `/game?roomId=${encodeURIComponent(activeRoom.roomId)}&stake=${encodeURIComponent(activeRoom.stake)}`,
+              { replace: true }
+            )
+            return
           }
           navigate(`/select-card?stake=${encodeURIComponent(stake)}`, { replace: true })
         }
       })
-      .catch(() => {})
+      .catch((err) => console.error('[App] Authentication failed:', err))
   }, [navigate])
 
   return (
     <LanguageProvider>
       <WalletProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Navigate to="/select-card?stake=10" replace />} />
-            <Route path="/card-selection" element={<CardSelection />} />
-            <Route path="/select-card" element={<CardSelection />} />
-            <Route path="/select-cards" element={<CardSelection />} />
-            <Route path="/game" element={<GameScreen />} />
-            <Route path="/wallet" element={<Wallet />} />
-            <Route path="/agent" element={<AgentDashboard />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/history" element={<GameHistory />} />
-            <Route path="/leaderboard" element={<Leaderboard />} />
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route
-              path="/admin"
-              element={localStorage.getItem('adminToken') ? <AdminLayout /> : <Navigate to="/admin/login" />}
-            >
-              <Route index element={<Navigate to="dashboard" />} />
-              <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="users" element={<AdminUsers />} />
-              <Route path="games" element={<AdminGames />} />
-              <Route path="payments" element={<AdminPayments />} />
-            </Route>
-
-          </Routes>
-        </BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Navigate to="/select-card?stake=10" replace />} />
+          <Route path="/card-selection" element={<CardSelection />} />
+          <Route path="/select-card" element={<CardSelection />} />
+          <Route path="/select-cards" element={<CardSelection />} />
+          <Route path="/game" element={<GameScreen />} />
+          <Route path="/wallet" element={<Wallet />} />
+          <Route path="/agent" element={<AgentDashboard />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/history" element={<GameHistory />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route
+            path="/admin"
+            element={localStorage.getItem('adminToken') ? <AdminLayout /> : <Navigate to="/admin/login" />}
+          >
+            <Route index element={<Navigate to="dashboard" />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="games" element={<AdminGames />} />
+            <Route path="payments" element={<AdminPayments />} />
+          </Route>
+        </Routes>
       </WalletProvider>
     </LanguageProvider>
   )

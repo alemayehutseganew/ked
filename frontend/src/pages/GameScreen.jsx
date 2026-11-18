@@ -39,7 +39,7 @@ const GameScreenContent = () => {
   const socket = SocketService.get() || SocketService.connect()
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const roomId = searchParams.get('roomId') || 'room_10';
+  const roomId = searchParams.get('roomId');
   const stake = parseInt(searchParams.get('stake')) || 10;
   const spectatorFromUrl = searchParams.get('spectator') === 'true';
   const userId = localStorage.getItem('dbUserId');
@@ -50,12 +50,20 @@ const GameScreenContent = () => {
   const [calledNumbers, setCalledNumbers] = useState([]);
   const [currentBall, setCurrentBall] = useState(null);
   const [calledHistory, setCalledHistory] = useState([]);
-  const [markedNumbers, setMarkedNumbers] = useState([]);
+  const marksStorageKey = `activeGameMarks:${roomId}`;
+  const [markedNumbers, setMarkedNumbers] = useState(() => {
+    try {
+      const savedMarks = JSON.parse(localStorage.getItem(marksStorageKey) || '[]');
+      return Array.isArray(savedMarks) ? savedMarks.map(Number).filter(Number.isFinite) : [];
+    } catch (err) {
+      console.error('[Game] Failed to restore marked numbers:', err);
+      return [];
+    }
+  });
   const [cardsData, setCardsData] = useState([]);
   const [playerCount, setPlayerCount] = useState(0);
   const [gameStatus, setGameStatus] = useState('WAITING');
   const playersCount = playerCount;
-  const [readyPlayers, setReadyPlayers] = useState(0);
   const [countdown, setCountdown] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [spectatorNumbers, setSpectatorNumbers] = useState([]);
@@ -89,6 +97,10 @@ const GameScreenContent = () => {
   };
 
   useEffect(() => {
+    if (!roomId) {
+      navigate(`/select-card?stake=${encodeURIComponent(stake)}`, { replace: true });
+      return;
+    }
     if (!userId) return;
 
     const handleJoin = () => {
@@ -98,7 +110,6 @@ const GameScreenContent = () => {
 
     socket.on('room_update', (data) => {
       if (Number.isFinite(Number(data.players))) setPlayerCount(Number(data.players));
-      if (Number.isFinite(Number(data.readyPlayers))) setReadyPlayers(Number(data.readyPlayers));
     });
     socket.on('players_updated', (data) => {
       if (Number.isFinite(Number(data.count))) setPlayerCount(Number(data.count));
@@ -106,6 +117,7 @@ const GameScreenContent = () => {
     socket.on('game_in_progress', (data) => {
       setCardsData([]);
       setMarkedNumbers([]);
+      localStorage.removeItem(marksStorageKey);
       setGameStarted(false);
       setSpectatorNumbers(data.calledNumbers || []);
       setSpectatorBall(data.currentBall || null);
@@ -121,9 +133,17 @@ const GameScreenContent = () => {
       if (Number.isFinite(Number(data.players))) setPlayerCount(Number(data.players));
     });
     socket.on('sync_game_state', (data) => {
-      console.log('[SOCKET] Synced game state:', data);
       setIsSpectator(false);
-      if (data.calledNumbers) setCalledNumbers(data.calledNumbers);
+      if (Array.isArray(data.calledNumbers)) {
+        setCalledNumbers(data.calledNumbers);
+        setCalledHistory(data.calledNumbers.slice(-5).map((number) => ({
+          number: Number(number),
+          letter: Number(number) <= 15 ? 'B'
+            : Number(number) <= 30 ? 'I'
+              : Number(number) <= 45 ? 'N'
+                : Number(number) <= 60 ? 'G' : 'O',
+        })));
+      }
       if (data.currentBall) setCurrentBall(data.currentBall);
       if (data.status) {
         setGameStatus(data.status);
@@ -132,12 +152,16 @@ const GameScreenContent = () => {
       if (Number.isFinite(Number(data.players))) setPlayerCount(Number(data.players));
     });
     socket.on('insufficient_funds', (data) => {
+      localStorage.removeItem('activeGameRoom');
+      localStorage.removeItem(marksStorageKey);
       alert(`💰 ${data.message}`);
       window.location.href = '/wallet';
     });
     socket.on('game_aborted', (data) => {
+      localStorage.removeItem('activeGameRoom');
+      localStorage.removeItem(marksStorageKey);
       alert(`⚠️ ${data.message}`);
-      window.location.href = '/';
+      navigate(`/select-card?stake=${encodeURIComponent(stake)}`, { replace: true });
     });
     socket.on('countdown_tick', (data) => setCountdown(data.timeLeft ?? data.seconds ?? null));
     socket.on('my_cards', (data) => {
@@ -151,8 +175,8 @@ const GameScreenContent = () => {
         msg.includes('already started') ||
         msg.includes('ROOM_NOT_FOUND')
       ) {
-        console.log('[Game] Active game no longer exists. Redirecting to card selection.')
         localStorage.removeItem('activeGameRoom')
+        localStorage.removeItem(marksStorageKey)
         navigate('/select-card?stake=' + encodeURIComponent(stake), { replace: true })
       }
     });
@@ -184,6 +208,7 @@ const GameScreenContent = () => {
     });
     socket.on('game_over', (data) => {
       localStorage.removeItem('activeGameRoom');
+      localStorage.removeItem(marksStorageKey);
       if (data.reason === 'no_winner' || (Array.isArray(data.winners) && data.winners.length === 0)) {
         setGameResult({
           type: 'loss',
@@ -226,6 +251,7 @@ const GameScreenContent = () => {
     socket.on('next_game_ready', (data) => {
       if (!isSpectator) return
       localStorage.removeItem('activeGameRoom')
+      localStorage.removeItem(marksStorageKey)
       setGameResult(null);
       setSpectatorNumbers([]);
       setSpectatorBall(null);
@@ -233,6 +259,7 @@ const GameScreenContent = () => {
     });
     socket.on('room_reset', (data) => {
       localStorage.removeItem('activeGameRoom');
+      localStorage.removeItem(marksStorageKey)
       setGameResult(null);
       setSpectatorNumbers([]);
       setSpectatorBall(null);
@@ -271,13 +298,12 @@ const GameScreenContent = () => {
       socket.off('bingo_result');
       socket.off('bingo_invalid');
     };
-  }, [socket, roomId, userId, stake, isSpectator, navigate]);
+  }, [socket, roomId, userId, stake, isSpectator, navigate, marksStorageKey]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible' || !userId) return;
 
-      console.log('[App] Resumed from background. Reconnecting socket...');
       if (!socket.connected) {
         socket.connect();
         return;
@@ -292,7 +318,11 @@ const GameScreenContent = () => {
   const handleDaub = (num) => {
     if (!calledNumbers.map(Number).includes(Number(num))) return;
     if (markedNumbers.map(Number).includes(Number(num))) return;
-    setMarkedNumbers(prev => [...prev, Number(num)]);
+    setMarkedNumbers((prev) => {
+      const next = [...prev, Number(num)];
+      localStorage.setItem(marksStorageKey, JSON.stringify(next));
+      return next;
+    });
   };
 
   const handleBingoClick = () => {
@@ -433,6 +463,7 @@ const GameScreenContent = () => {
         onCardUpdated={(updatedCard) => {
           setCardsData([updatedCard]);
           setMarkedNumbers([]);
+          localStorage.removeItem(marksStorageKey);
         }}
       />
     );

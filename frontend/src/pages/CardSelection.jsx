@@ -28,7 +28,6 @@ export default function CardSelection({
   onCardUpdated,
 }) {
   const [searchParams] = useSearchParams();
-  console.log('[CARD SELECTION] Rendering. Stake:', searchParams.get('stake'));
   const rawStake = searchParams.get('stake');
   const stake = rawStake ? Number(rawStake) || 10 : 10;
   const roomId = searchParams.get('roomId');
@@ -97,7 +96,6 @@ export default function CardSelection({
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to fetch waiting room.');
         if (!active) return;
-        setActiveRoomId(data.roomId || null);
         setSocketPlayersCount(Number(data.playerCount) || 0);
       } catch (err) {
         console.error('Failed to fetch waiting room', err);
@@ -139,11 +137,9 @@ export default function CardSelection({
         console.error('[SOCKET] Received game_started without an active room ID.');
         return;
       }
-      console.log('[SOCKET] Game started! Redirecting to game screen...');
       navigate(`/game?roomId=${encodeURIComponent(gameRoomId)}&stake=${encodeURIComponent(stake)}`, { replace: true });
     };
     const handleGameAborted = (data) => {
-      console.log('[SOCKET] Game aborted:', data?.message);
       setSocketCountdown(null);
       showToast(data?.message || 'Game cancelled.');
     };
@@ -238,6 +234,7 @@ export default function CardSelection({
 
     const previousCard = currentSelectedCard;
     const previousMatrix = currentSelectedMatrix;
+    const previousTakenCards = takenCards;
     setTakenCards((prev) => prev.filter((takenCard) => (
       takenCard !== previousCard && takenCard !== cardNumber
     )));
@@ -278,9 +275,11 @@ export default function CardSelection({
         stake: Number(data.stake || stake),
       }));
 
+      const selectedCardData = data.card || data.cards?.[0];
+      if (!selectedCardData) throw new Error('The selected card was not returned by the server.');
       const updatedCard = {
-        id: Number(data.card.id),
-        matrix: data.card.matrix,
+        id: Number(selectedCardData.id),
+        matrix: selectedCardData.matrix,
       };
       setSelectedCard(updatedCard.id);
       setSelectedMatrix(updatedCard.matrix);
@@ -293,14 +292,19 @@ export default function CardSelection({
     };
 
     try {
-      const res = await fetchApi('/rooms/join', {
-        method: 'POST',
-        body: JSON.stringify({
+      const endpoint = activeRoomId
+        ? `/rooms/${encodeURIComponent(activeRoomId)}/select-cards`
+        : '/rooms/join';
+      const payload = activeRoomId
+        ? { cardIds: [cardNumber] }
+        : {
           stake: Number(stake),
           card_number: cardNumber,
           userId: localStorage.getItem('dbUserId'),
-          ...(roomId ? { roomId } : {}),
-        }),
+        };
+      const res = await fetchApi(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -314,7 +318,11 @@ export default function CardSelection({
       const errorText = String(err.message || '');
       const errorMessage = errorText.toLowerCase();
       
-      if (errorMessage.includes('join the room before changing your card') || errorMessage.includes('not room participant')) {
+      if (
+        errorMessage.includes('join the room before changing your card') ||
+        errorMessage.includes('join the room before selecting cards') ||
+        errorMessage.includes('not room participant')
+      ) {
         try {
           const joinRes = await fetchApi('/rooms/join', {
             method: 'POST',
@@ -333,6 +341,7 @@ export default function CardSelection({
           showToast(String(retryErr.message || t('joinFailed')));
           setSelectedCard(previousCard);
           setSelectedMatrix(previousMatrix);
+          setTakenCards(previousTakenCards);
           return;
         }
       }
@@ -350,6 +359,7 @@ export default function CardSelection({
 
       setSelectedCard(previousCard);
       setSelectedMatrix(previousMatrix);
+      setTakenCards(previousTakenCards);
       showToast(errorText || t('joinFailed'));
       if (errorMessage.includes('taken')) {
         setTakenCards((prev) => (prev.includes(cardNumber) ? prev : [...prev, cardNumber]));

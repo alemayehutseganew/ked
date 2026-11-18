@@ -20,7 +20,6 @@ const attemptAudioUnlock = async () => {
     unlockAudioObj.pause();
     unlockAudioObj.currentTime = 0;
     isAudioUnlocked = true;
-    console.log('[Audio] Mobile audio context unlocked successfully.');
     return true;
   } catch (error) {
     console.warn('[Audio] Unlock failed. The user might need to interact again.', error);

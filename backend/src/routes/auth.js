@@ -27,7 +27,7 @@ function validateInitData(initData, botToken) {
   if (!userStr) return null
   try {
     return JSON.parse(userStr)
-  } catch (e) {
+  } catch {
     return null
   }
 }
