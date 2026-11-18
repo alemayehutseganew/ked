@@ -551,34 +551,15 @@ function initGameHandler(io) {
 
     socket.on('join_room', async ({ roomId, stake, spectator }) => {
       try {
-        const user = { id: socket.data.userId }
-        if (!user.id) return socket.emit('error', { message: 'User not found' })
+        const user = await db('users').where({ id: socket.data.userId }).first()
+        if (!user) return socket.emit('error', { message: 'User not found' })
 
-        const roomAccess = await db('game_rooms as r')
-          .leftJoin('room_participants as p', function () {
-            this.on('p.room_id', '=', 'r.id')
-              .andOn('p.user_id', '=', db.raw('?', [user.id]))
-          })
-          .where('r.id', roomId)
-          .select(
-            'r.id',
-            'r.stake_amount',
-            'r.status',
-            'r.called_numbers',
-            'p.id as participant_id'
-          )
+        const persistedRoom = await db('game_rooms').where({ id: roomId }).first()
+        if (!persistedRoom) return socket.emit('error', { message: 'Room not found' })
+
+        const participant = await db('room_participants')
+          .where({ room_id: roomId, user_id: user.id })
           .first()
-        if (!roomAccess) return socket.emit('error', { message: 'Room not found' })
-
-        const persistedRoom = {
-          id: roomAccess.id,
-          stake_amount: roomAccess.stake_amount,
-          status: roomAccess.status,
-          called_numbers: roomAccess.called_numbers,
-        }
-        const participant = roomAccess.participant_id
-          ? { id: roomAccess.participant_id, user_id: user.id }
-          : null
         await socket.join(roomId)
 
         const currentPlayerCount = await getPlayerCount(roomId)

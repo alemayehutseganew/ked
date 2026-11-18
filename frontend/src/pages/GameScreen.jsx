@@ -73,6 +73,12 @@ const GameScreenContent = () => {
   const [isVoiceOn, setIsVoiceOn] = useState(false);
 
   useEffect(() => {
+    if (roomId && markedNumbers.length > 0) {
+      localStorage.setItem(marksStorageKey, JSON.stringify(markedNumbers));
+    }
+  }, [markedNumbers, marksStorageKey, roomId]);
+
+  useEffect(() => {
     toggleVoice(false);
     return () => toggleVoice(false);
   }, []);
